@@ -103,7 +103,7 @@ function map_boxes(g::BoxMap, source::BoxSet)
     return BoxSet(P, union(image...))
 end
 
-function GAIO.map_boxes(g::SampledBoxMap{N,T,Val{:cpu}}, source::BoxSet) where {N,T}
+function map_boxes(g::SampledBoxMap{N,T,Val{:cpu}}, source::BoxSet) where {N,T}
     P, keys = source.partition, collect(source.set)
     image = fill( Set{eltype(keys)}(), nthreads() )
     test_points = g.domain_points(P.domain.center, P.domain.radius)
