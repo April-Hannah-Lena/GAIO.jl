@@ -7,8 +7,8 @@ A generalized box with
 
 """
 struct Box{N,T <: AbstractFloat}
-    center::SVector{N,T}
-    radius::SVector{N,T}
+    center::NTuple{N,T}
+    radius::NTuple{N,T}
 
     function Box(center, radius)
         N = length(center)
@@ -26,7 +26,7 @@ struct Box{N,T <: AbstractFloat}
             T = Float64
         end
 
-        return new{N,T}(SVector{N,T}(center), SVector{N,T}(radius))
+        return new{N,T}(NTuple{N,T}(center), NTuple{N,T}(radius))
     end
 end
 

@@ -32,10 +32,10 @@ function Base.getindex(partition::AbstractBoxPartition, points_or_point)
     set = Set{keytype(typeof(partition))}()
     sizehint!(set, length(points))
 
-    for point in points
-        key = point_to_key(partition, point)
+    for p in points
+        key = point_to_key(partition, p)
 
-        if key !== nothing
+        if !isnothing(key)
             push!(set, key)
         end
     end

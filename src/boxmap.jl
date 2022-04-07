@@ -43,12 +43,12 @@ function PointDiscretizedMap(map, domain, points::AbstractArray, accel=nothing)
     return SampledBoxMap(map, domain, domain_points, image_points, accel)
 end
 
-function BoxMap(map, domain::Box{N,T}, accel=nothing; no_of_points::Int=16*N) where {N,T}
+function BoxMap(map, domain::Box{N,T}, accel=nothing; no_of_points::Int=4*N*pick_vector_width(T)) where {N,T}
     points = [ SVector{N,T}(2.0*rand(T,N).-1.0) for _ = 1:no_of_points ] 
     return PointDiscretizedMap(map, domain, points, accel) 
 end
 
-function BoxMap(map, P::BoxPartition{N,T}, accel=nothing; no_of_points::Int=16*N) where {N,T}
+function BoxMap(map, P::BoxPartition{N,T}, accel=nothing; no_of_points::Int=4*N*pick_vector_width(T)) where {N,T}
     BoxMap(map, P.domain, accel; no_of_points=no_of_points)
 end
 
@@ -76,7 +76,7 @@ function AdaptiveBoxMap(f, domain::Box{N,T}) where {N,T}
     end
     # calculates the vertices of each box
     image_points(center, radius) = vertices
-    return SampledBoxMap(f, domain, domain_points, image_points)
+    return SampledBoxMap(f, domain, domain_points, image_points, nothing)
 end
 
 function map_boxes(g::BoxMap, source::BoxSet)
@@ -90,36 +90,12 @@ function map_boxes(g::BoxMap, source::BoxSet)
             fp = @muladd p .* r .+ c
             fp = g.map(fp)
             hit = point_to_key(P, fp)
-            if hit !== nothing
+            if !isnothing(hit)
                 push!(image[threadid()], hit)
             end
         end
     end
-    BoxSet(P, union(image...))
-end 
-
-function map_boxes(g::SampledBoxMap{N,T,Val{:cpu}}, source::BoxSet) where {N,T}
-    P, keys = source.partition, collect(source.set)
-    image = fill( Set{eltype(keys)}(), nthreads() )
-    @threads for key in keys
-        box = key_to_box(P, key)
-        c, r = box.center, box.radius
-        points = deepcopy(g.domain_points(c, r))
-        points_vec = reinterpret(T, points)
-        # We need an explicit loop since broadcasting does not work in j1.7.2
-        @turbo for i in 0:N:length(points_vec)-N, j in 1:N
-            points_vec[i+j] = @muladd points_vec[i+j] * r[j] + c[j]
-        end
-        points_vec .= g.map(points_vec)
-        points = reinterpret(SVector{N,T}, points_vec)
-        for p in points
-            hit = point_to_key(P, p)
-            if hit !== nothing
-                push!(image[threadid()], hit)
-            end
-        end
-    end
-    BoxSet(P, union(image...))
-end 
+    return BoxSet(P, union(image...))
+end  
 
 (g::BoxMap)(source::BoxSet) = map_boxes(g, source)

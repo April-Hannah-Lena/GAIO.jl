@@ -47,9 +47,10 @@ function TransferOperator(g::SampledBoxMap, boxset::BoxSet)
         c, r = box.center, box.radius
         points = g.domain_points(c, r)
         for p in points
-            fp = g.map(c.+r.*p)
+            fp = @muladd p .* r .+ c
+            fp = g.map(fp)
             hit = point_to_key(P, fp)
-            if hit !== nothing
+            if !isnothing(hit)
                 if hit in boxset.set
                     j = key_to_index[hit]
                     e = (i,j)
