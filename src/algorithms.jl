@@ -25,7 +25,8 @@ function chain_recurrent_set(F::BoxMap, B::BoxSet{<:AbstractBoxPartition{Box{N,T
     return B
 end
 
-function adaptive_newton_step(g, g_jacobian, x, k)
+function adaptive_newton_step(g, g_jacobian, x_tup, k)
+    x = [x_tup ...]
     armijo_rule = (g, x, α, σ, ρ) -> begin
         Dg = g_jacobian(x)
         d = Dg\g(x)

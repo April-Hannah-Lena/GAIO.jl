@@ -16,6 +16,7 @@ function f(x)
     )
     return dx
 end
+F(x) = rk4_flow_map(f, x)
 
 # Internally, GAIO calls this function on a set of test points
 # within the domain. This means many function calls have to be made.
