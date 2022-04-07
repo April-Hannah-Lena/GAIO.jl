@@ -23,10 +23,10 @@ using Test
             @test !isempty(full_boxset)
             @test length(full_boxset) == 2^11
         end
-        p1 = SVector(0.5, 0.5, 0.5)
-        p2 = SVector(-0.5, 0.5, 0.5)
-        p3 = SVector(0.5, -0.5, 0.5)
-        p4 = SVector(0.51, 0.51, 0.51)
+        p1 = (0.5, 0.5, 0.5)
+        p2 = (-0.5, 0.5, 0.5)
+        p3 = (0.5, -0.5, 0.5)
+        p4 = (0.51, 0.51, 0.51)
         @testset "boxsets created on points" begin
             box_set = partition[(p1, p2, p3, p4)]
             @test length(box_set) == 3
@@ -73,7 +73,7 @@ using Test
 end
 
 #=     @testset "tree partition" begin
-        partition = TreePartition(Box(SVector(0.0, 0.0, 0.0), SVector(1.0, 1.0, 1.0)))
+        partition = TreePartition(Box((0.0, 0.0, 0.0), (1.0, 1.0, 1.0)))
         @testset "empty" begin
             empty_boxset = boxset_empty(partition)
             @test isempty(empty_boxset)
@@ -98,10 +98,10 @@ end
         # to get a full tree at a certain depth. Not
         # really very clean
         partition = full_boxset.partition
-        p1 = SVector(0.5, 0.5, 0.5)
-        p2 = SVector(-0.5, 0.5, 0.5)
-        p3 = SVector(0.5, -0.5, 0.5)
-        p4 = SVector(0.51, 0.51, 0.51)
+        p1 = (0.5, 0.5, 0.5)
+        p2 = (-0.5, 0.5, 0.5)
+        p3 = (0.5, -0.5, 0.5)
+        p4 = (0.51, 0.51, 0.51)
         @testset "box sets created on points" begin
             box_set = partition[(p1, p2, p3, p4)]
             @test length(box_set) == 3

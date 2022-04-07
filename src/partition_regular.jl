@@ -82,6 +82,15 @@ function unsafe_point_to_ints(partition::BoxPartition, point)
     return map(xi -> Base.trunc(Int, xi), x)
 end
 
+#function unsafe_point_to_ints(partition::BoxPartition, point::SV) where SV<:Union{NTuple{N,SIMD.Vec{simd,T}}, <:StaticVector{N,SIMD.Vec{simd,T}}} where {N,T,simd}
+function unsafe_point_to_ints(partition::BoxPartition, point::NTuple{N,SIMD.Vec{simd,T}}) where {N,T,simd}
+    x = (point .- partition.left) .* partition.scale
+    x_ints = map(x) do xi
+        convert(SIMD.Vec{simd, Int}, trunc(xi))
+    end
+    return x_ints
+end
+
 function ints_to_key(partition::BoxPartition, x_ints)
     if any(x_ints .< zero(eltype(x_ints))) || any(x_ints .>= partition.dims)
         @debug "point does not lie in the domain" x_ints partition.dims
@@ -91,13 +100,40 @@ function ints_to_key(partition::BoxPartition, x_ints)
     return key
 end
 
+#function ints_to_key(partition::BoxPartition, x_ints::SV) where SV<:Union{NTuple{N,SIMD.Vec{simd,T}}, <:StaticVector{N,SIMD.Vec{simd,T}}} where {N,T,simd}
+function ints_to_key(partition::BoxPartition, x_ints::NTuple{N,SIMD.Vec{simd,T}}) where {N,T,simd}
+    in_bounds = all.(
+        tuple_vscatter(
+            ( x_ints .>= zero(T) ) .& ( x_ints .< partition.dims )
+        )
+    )
+    key = NTuple{simd,T}(sum(x_ints .* partition.dimsprod) + 1)
+    return key[in_bounds]
+end
+
 function point_to_key(partition::BoxPartition, point)
     x_ints = unsafe_point_to_ints(partition, point)
     key = ints_to_key(partition, x_ints)
-    bound = partition.dimsprod[end] * partition.dims[end]
-    if key > bound
-        @debug "key out of bounds" key bound
-        key = bound
+    if !isnothing(key)
+        bound = partition.dimsprod[end] * partition.dims[end]
+        if key > bound
+            @debug "key out of bounds" key bound
+            key = bound
+        end
     end
     return key
+end
+
+#function point_to_key(partition::BoxPartition, point::SV) where SV<:Union{NTuple{N,SIMD.Vec{simd,T}}, <:StaticVector{N,SIMD.Vec{simd,T}}} where {N,T,simd}
+function point_to_key(partition::BoxPartition, point::NTuple{N,SIMD.Vec{simd,T}}) where {N,T,simd}
+    x_ints = unsafe_point_to_ints(partition, point)
+    key = ints_to_key(partition, x_ints)
+    bound = partition.dimsprod[end] * partition.dims[end]
+    for i in eachindex(key)
+        if !isnothing(key[i]) && key[i] .> bound
+            @debug "key out of bounds" key bound
+            key[i] = bound
+        end
+    end
+    return key 
 end

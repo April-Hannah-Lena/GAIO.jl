@@ -3,7 +3,7 @@ using StaticArrays
 using Test
 
 @testset "exported functionality" begin
-    partition = TreePartition(Box(SVector(0.0, 0.0, 0.0, 0.0), SVector(1.0, 1.0, 1.0, 1.0)))
+    partition = TreePartition(Box((0.0, 0.0, 0.0, 0.0), (1.0, 1.0, 1.0, 1.0)))
     @testset "basics" begin
         @test depth(partition) == 0
         @test dimension(partition) == 4
@@ -17,8 +17,8 @@ using Test
         @test dimension(partition) == 4
     end
     @testset "domain with zero radius" begin
-        center = SVector(0.0, 0.0)
-        radius = SVector(1.0, 0.0)
+        center = (0.0, 0.0)
+        radius = (1.0, 0.0)
         @test_throws DomainError Box(center, radius)
     end
 end

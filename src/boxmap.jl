@@ -57,12 +57,12 @@ function BoxMap(map, P::BoxPartition{N,T}, accel=nothing; no_of_points::Int=4*N*
     BoxMap(map, P.domain, accel; no_of_points=no_of_points)
 end
 
-function sample_adaptive(Df, center::SVector{N,T}) where {N,T}  # how does this work?
+function sample_adaptive(Df, center::NTuple{N,T}) where {N,T}  # how does this work?
     D = Df(center)
     _, σ, Vt = svd(D)
     n = ceil.(Int, σ) 
     h = 2.0./(n.-1)
-    points = Array{SVector{N,T}}(undef, ntuple(i->n[i], N))
+    points = Array{NTuple{N,T}}(undef, ntuple(i->n[i], N))
     for i in CartesianIndices(points)
         points[i] = ntuple(k -> n[k]==1 ? 0.0 : (i[k]-1)*h[k]-1.0, N)
         points[i] = Vt'*points[i]
@@ -75,7 +75,7 @@ function AdaptiveBoxMap(f, domain::Box{N,T}) where {N,T}
     Df = x -> ForwardDiff.jacobian(f, x)
     domain_points(center, radius) = sample_adaptive(Df, center)
 
-    vertices = Array{SVector{N,T}}(undef, ntuple(k->2, N))
+    vertices = Array{NTuple{N,T}}(undef, ntuple(k->2, N))
     for i in CartesianIndices(vertices)
         vertices[i] = ntuple(k -> (-1.0)^i[k], N)
     end
@@ -101,6 +101,25 @@ function map_boxes(g::BoxMap, source::BoxSet)
         end
     end
     return BoxSet(P, union(image...))
-end  
+end
+
+function GAIO.map_boxes(g::SampledBoxMap{N,T,Val{:cpu}}, source::BoxSet) where {N,T}
+    P, keys = source.partition, collect(source.set)
+    image = fill( Set{eltype(keys)}(), nthreads() )
+    test_points = g.domain_points(P.domain.center, P.domain.radius)
+    n, simd = length(test_points), pick_vector_width(T)
+    @threads for key in keys
+        box = key_to_box(P, key)
+        c, r = box.center, box.radius
+        for i in 0:simd:n-simd
+            points = tuple_vgather(view(test_points, i+1:i+simd), simd)
+            points = @muladd points .* r .+ c
+            points = g.map(points)
+            keys = point_to_key(P, points)
+            push!(image[threadid()], keys...)
+        end
+    end
+    return BoxSet(P, union(image...))
+end
 
 (g::BoxMap)(source::BoxSet) = map_boxes(g, source)

@@ -2,8 +2,8 @@
 
 """
 A generalized box with
-`center`:   vector where the box's center is located
-`radius`:   vector of radii, length of the box in each dimension
+`center`:   Tuple where the box's center is located
+`radius`:   Tuple of radii, length of the box in each dimension
 
 """
 struct Box{N,T <: AbstractFloat}
@@ -14,7 +14,7 @@ struct Box{N,T <: AbstractFloat}
         N = length(center)
 
         if length(radius) != N
-            throw(DimensionMismatch("Center vector and radius vector must have same length ($N)"))
+            throw(DimensionMismatch("Center Tuple and radius Tuple must have same length ($N)"))
         end
 
         if any(x -> x <= 0, radius)

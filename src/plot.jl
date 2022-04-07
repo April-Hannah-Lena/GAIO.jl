@@ -3,7 +3,7 @@
 # include("plot/plot.jl")
 
 function plot(boxset::BoxSet{<:AbstractBoxPartition{<:Box{N}}}; kwargs...) where N
-    m = HyperRectangle(Vec3f0(0), Vec3f0(1))
+    m = HyperRectangle(GeometryBasics.Vec3f0(0), GeometryBasics.Vec3f0(1))
     c = [box.center.-box.radius for box in boxset]
     r = [1.9 .* box.radius for box in boxset]
     fig, ax, ms = meshscatter(GeometryBasics.Vec{N, Float32}.(c), marker = m, markersize = r,
@@ -31,7 +31,7 @@ function plot(boxfun::BoxFun{<:AbstractBoxPartition{<:Box{3}}}; kwargs...) where
         push!(radius, 1.9 .* box.radius)
         push!(color, value)
     end
-    m = HyperRectangle(Vec3f0(0), Vec3f0(1))
+    m = HyperRectangle(GeometryBasics.Vec3f0(0), GeometryBasics.Vec3f0(1))
     fig = Figure()
     fig, ax, ms = meshscatter(center, marker = m, markersize = radius, 
                               color = color, colormap =:jet; kwargs...)
