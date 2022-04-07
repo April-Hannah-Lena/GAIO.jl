@@ -152,7 +152,6 @@ function GAIO.map_boxes(g::SampledBoxMap{N,T,Val{:cpu}}, source::BoxSet) where {
     image = fill( Set{eltype(keys)}(), nthreads() )
     test_points = g.domain_points(P.domain.center, P.domain.radius)
     n, simd = length(test_points), pick_vector_width(T)
-    @assert n%simd==0 "Number of test points $n is not divisible by SIMD capability $(simd)"
     @threads for key in keys
         box = key_to_box(P, key)
         c, r = box.center, box.radius
@@ -190,7 +189,6 @@ function GAIO.map_boxes(g::SampledBoxMap{N,T,Val{:cpu}}, source::BoxSet) where {
     image = fill( Set{eltype(keys)}(), nthreads() )
     test_points = g.domain_points(P.domain.center, P.domain.radius)
     n, simd = length(test_points), pick_vector_width(T)
-    @assert n%simd==0 "Number of test points $n is not divisible by SIMD capability $(simd)"
     @threads for key in keys
         box = key_to_box(P, key)
         c, r = box.center, box.radius

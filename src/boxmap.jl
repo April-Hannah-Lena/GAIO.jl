@@ -37,7 +37,12 @@ function Base.show(io::IO, g::BoxMap)
     print(io, "BoxMap with $(n) sample points")
 end
 
-function PointDiscretizedMap(map, domain, points::AbstractArray, accel=nothing)
+function PointDiscretizedMap(map, domain, points::AbstractArray{T,N}, accel=nothing) where {T,N}
+    if accel isa Val{:cpu}
+        n = length(points)
+        simd = pick_vector_width(T)
+        @assert n%simd==0 "Number of test points $n is not divisible by SIMD capability $(simd)"
+    end
     domain_points(center, radius) =  points
     image_points(center, radius) = center
     return SampledBoxMap(map, domain, domain_points, image_points, accel)
