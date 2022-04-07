@@ -29,7 +29,6 @@ struct BoxPartition{N,T} <: AbstractBoxPartition{Box{N,T}}
 end
 
 function BoxPartition(domain::Box{N,T}, dims::NTuple{N,Int}) where {N,T}
-    dims = NTuple{N,Int}(dims)
     left = domain.center .- domain.radius
     scale = dims ./ (2 .* domain.radius)
     # nr. of boxes / diameter of the domain == 1 / diameter of each box
@@ -57,7 +56,7 @@ keytype(::Type{<:BoxPartition}) = Int
 keys_all(partition::BoxPartition) = 1:prod(partition.dims)
 # == 1 : partition.dimsprod[end] * partition.dims[end]
 
-Base.size(partition::BoxPartition) = partition.dims # .data returns as tuple
+Base.size(partition::BoxPartition) = partition.dims 
 
 function Base.show(io::IO, partition::BoxPartition) 
     print(io, "$(partition.dims[1])")
@@ -69,7 +68,7 @@ end
 
 # TODO: replace with overloaded getindex
 function key_to_box(partition::BoxPartition{N,T}, key::M) where M <: Union{Int, NTuple{N, Int}} where {N,T}
-    dims = size(partition)
+    dims = partition.dims
     radius = partition.domain.radius ./ dims
     left = partition.domain.center .- partition.domain.radius
     center = left .+ radius .+ (2 .* radius) .* (CartesianIndices(dims)[key].I .- 1)
@@ -87,7 +86,6 @@ function point_to_key(partition::BoxPartition, point)
     x_ints = unsafe_point_to_ints(partition, point)
 
     if any(x_ints .< zero(eltype(x_ints))) || any(x_ints .>= partition.dims)
-        @debug "point does not lie in the domain" point partition.domain
         return nothing
     end
     

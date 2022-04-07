@@ -42,7 +42,7 @@ end
 
 function ints_to_key(partition::BoxPartition, x_ints)
     if any(x_ints .< zero(eltype(x_ints))) || any(x_ints .>= partition.dims)
-        @debug "point does not lie in the domain" point partition.domain
+        @debug "point does not lie in the domain" x_ints partition.dims
         return nothing
     end
     key = sum(x_ints .* partition.dimsprod) + 1
@@ -64,7 +64,7 @@ function GAIO.point_to_key(partition::BoxPartition, point)
     key = ints_to_key(partition, x_ints)
     bound = partition.dimsprod[end] * partition.dims[end]
     if key > bound
-        @debug "key out of bounds"
+        @debug "key out of bounds" key bound
         key = bound
     end
     return key
@@ -75,7 +75,7 @@ function GAIO.point_to_key(partition::BoxPartition, point::SV) where SV<:Union{N
     bound = partition.dimsprod[end] * partition.dims[end]
     for i in eachindex(key)
         if key[i] .> bound
-            @debug "key out of bounds"
+            @debug "key out of bounds" key bound
             key[i] = bound
         end
     end
@@ -137,7 +137,11 @@ G = BoxMap(F, P, :cpu)
 Y = G(P[x])
 W = unstable_set!(G, P[x])
 for _ in 1:10
-    @time unstable_set!(G, P[x])
+    try
+        @time unstable_set!(G, P[x])
+    catch
+        print("errorred")
+    end
 end
 
 # -----------------------------------------
@@ -171,7 +175,11 @@ G = BoxMap(F, P, :cpu)
 Y = G(P[x])
 W = unstable_set!(G, P[x])
 for _ in 1:10
-    @time unstable_set!(G, P[x])
+    try
+        @time unstable_set!(G, P[x])
+    catch
+        print("errorred")
+    end
 end
 
 # -----------------------------------------
@@ -201,7 +209,11 @@ G = BoxMap(F, P, :cpu)
 Y = G(P[x])
 W = unstable_set!(G, P[x])
 for _ in 1:10
-    @time unstable_set!(G, P[x])
+    try
+        @time unstable_set!(G, P[x])
+    catch
+        print("errorred")
+    end
 end
 
 #plot(W)

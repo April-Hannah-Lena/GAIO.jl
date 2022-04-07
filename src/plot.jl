@@ -14,7 +14,7 @@ function plot(boxfun::BoxFun{<:AbstractBoxPartition{<:Box{1}}}; kwargs...)
     c, r, v = Float32[], Float32[], Float32[]
 
     for (key, value) in boxfun.dict
-        box = GAIO.key_to_box(boxfun.partition, key)
+        box = key_to_box(boxfun.partition, key)
         push!(c, box.center[1])
         push!(r, 1.9 * box.radius[1])
         push!(v, value)
