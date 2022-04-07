@@ -37,7 +37,7 @@ function Base.show(io::IO, g::BoxMap)
     print(io, "BoxMap with $(n) sample points")
 end
 
-function PointDiscretizedMap(map, domain, points::AbstractArray{T,N}, accel=nothing) where {T,N}
+function PointDiscretizedMap(map, domain, points::AbstractArray{T,N}, accel=nothing) where {N,T}
     if accel isa Val{:cpu}
         n = length(points)
         simd = pick_vector_width(T)
@@ -49,9 +49,9 @@ function PointDiscretizedMap(map, domain, points::AbstractArray{T,N}, accel=noth
 end
 
 function BoxMap(map, domain::Box{N,T}, accel=nothing; no_of_points::Int=4*N*pick_vector_width(T)) where {N,T}
-    points = [ NTuple{N,T}(2.0*rand(T,N).-1.0 ...) for _ = 1:no_of_points ] 
+    points = [ tuple(2.0*rand(T,N).-1.0 ...) for _ = 1:no_of_points ] 
     return PointDiscretizedMap(map, domain, points, accel) 
-end
+end 
 
 function BoxMap(map, P::BoxPartition{N,T}, accel=nothing; no_of_points::Int=4*N*pick_vector_width(T)) where {N,T}
     BoxMap(map, P.domain, accel; no_of_points=no_of_points)

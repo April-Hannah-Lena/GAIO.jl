@@ -82,12 +82,22 @@ function unsafe_point_to_ints(partition::BoxPartition, point)
     return map(xi -> Base.trunc(Int, xi), x)
 end
 
-function point_to_key(partition::BoxPartition, point)
-    x_ints = unsafe_point_to_ints(partition, point)
-
+function ints_to_key(partition::BoxPartition, x_ints)
     if any(x_ints .< zero(eltype(x_ints))) || any(x_ints .>= partition.dims)
+        @debug "point does not lie in the domain" x_ints partition.dims
         return nothing
     end
-    
-    return sum(x_ints .* partition.dimsprod) + 1
+    key = sum(x_ints .* partition.dimsprod) + 1
+    return key
+end
+
+function point_to_key(partition::BoxPartition, point)
+    x_ints = unsafe_point_to_ints(partition, point)
+    key = ints_to_key(partition, x_ints)
+    bound = partition.dimsprod[end] * partition.dims[end]
+    if key > bound
+        @debug "key out of bounds" key bound
+        key = bound
+    end
+    return key
 end
