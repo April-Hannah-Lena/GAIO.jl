@@ -74,7 +74,7 @@ function tree_search(tree::TreePartition{N,T}, point) where {N,T}
 end
 
 function point_to_key(partition::TreePartition, point)
-    if point_to_key(partition.regular_partitions[1], point) === nothing
+    if isnothing(point_to_key(partition.regular_partitions[1], point))
         return nothing
     end
 

@@ -29,7 +29,7 @@ end
 function BoxPartition(domain::Box{N,T}, dims::NTuple{N,Int}) where {N,T}
     dims = SVector{N,Int}(dims)
     left = domain.center .- domain.radius
-    scale = dims ./ (2*domain.radius)
+    scale = dims ./ (2 .* domain.radius)
     # nr. of boxes / diameter of the domain == 1 / diameter of each box
     dimsprod_ = [SVector(1); cumprod(dims)]
     dimsprod = dimsprod_[SOneTo(N)]
@@ -66,7 +66,7 @@ function Base.show(io::IO, partition::BoxPartition)
 end
 
 # TODO: replace with overloaded getindex
-function key_to_box(partition::BoxPartition{N,T}, key::M) where M <: Union{Int, NTuple{N, Int}} where {N,T}
+@muladd function key_to_box(partition::BoxPartition{N,T}, key::M) where M <: Union{Int, NTuple{N, Int}} where {N,T}
     dims = size(partition)
     radius = partition.domain.radius ./ dims
     left = partition.domain.center .- partition.domain.radius
@@ -75,19 +75,43 @@ function key_to_box(partition::BoxPartition{N,T}, key::M) where M <: Union{Int, 
     return Box(center, radius)
 end 
 
-function unsafe_point_to_ints(partition::BoxPartition, point)
+@muladd function unsafe_point_to_ints(partition::BoxPartition, point)
     x = (point .- partition.left) .* partition.scale    
     # counts how many boxes x is away from left (componentwise)
-    return map(xi -> Base.unsafe_trunc(Int, xi), x)
+    return map(xi -> Base.trunc(Int, xi), x)
+end
+
+#function unsafe_point_to_ints(partition::BoxPartition, point::NTuple{N,SIMD.Vec{simd,T}}) where {N,T,simd}
+@muladd function unsafe_point_to_ints(partition::BoxPartition, point::SV) where SV<:Union{NTuple{N,SIMD.Vec{simd,T}}, <:StaticVector{N,SIMD.Vec{simd,T}}} where {N,T,simd}
+    x = (point .- partition.left) .* partition.scale
+    x_ints = map(x) do xi
+        convert(SIMD.Vec{simd, Int}, trunc(xi))
+    end
+    return x_ints
+end
+
+function ints_to_key(partition::BoxPartition, x_ints)
+    if any(x_ints .< zero(eltype(x_ints))) || any(x_ints .>= partition.dims)
+        @debug "point does not lie in the domain" x_ints partition.dims
+        return nothing
+    end
+    key = sum(x_ints .* partition.dimsprod) + 1
+    return key
+end
+
+#function ints_to_key(partition::BoxPartition, x_ints::NTuple{N,SIMD.Vec{simd,T}}) where {N,T,simd}
+@inbounds function ints_to_key(partition::BoxPartition, x_ints::SV) where SV<:Union{NTuple{N,SIMD.Vec{simd,T}}, <:StaticVector{N,SIMD.Vec{simd,T}}} where {N,T,simd}
+    in_bounds = all.(
+        tuple_vscatter(
+            ( x_ints .>= zero(T) ) .& ( x_ints .< partition.dims )
+        )
+    )
+    key = NTuple{simd,T}(sum(x_ints .* partition.dimsprod) + 1)
+    return key[in_bounds]
 end
 
 function point_to_key(partition::BoxPartition, point)
     x_ints = unsafe_point_to_ints(partition, point)
-
-    if any(x_ints .< zero(eltype(x_ints))) || any(x_ints .>= partition.dims)
-        @debug "point does not lie in the domain" point partition.domain
-        return nothing
-    end
-    
-    return sum(x_ints .* partition.dimsprod) + 1
+    key = ints_to_key(partition, x_ints)
+    return key
 end
