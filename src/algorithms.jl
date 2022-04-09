@@ -25,7 +25,8 @@ function chain_recurrent_set(F::BoxMap, B::BoxSet{<:AbstractBoxPartition{Box{N,T
     return B
 end
 
-function adaptive_newton_step(g, g_jacobian, x, k)
+function adaptive_newton_step(g, g_jacobian, x_tup, k)
+    x = [x_tup ...]
     armijo_rule = (g, x, α, σ, ρ) -> begin
         Dg = g_jacobian(x)
         d = Dg\g(x)
@@ -118,9 +119,9 @@ const sixth, third = 1/6, 1/3
     return k
 end
 
-@inline function rk4_flow_map(v, x; step_size=0.01, steps=20)
-    for i = 1:steps
-        x = rk4(v, x, step_size)
+@inline function rk4_flow_map(f, x; step_size=0.01, steps=20)
+    for _ in 1:steps
+        x = rk4(f, x, step_size)
     end
     return x
 end

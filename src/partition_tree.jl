@@ -48,7 +48,7 @@ function tree_search(tree::TreePartition{N,T}, point) where {N,T}
     node_idx = 1
     tree_depth = depth(tree)
     current_depth = 0
-    ints = zeros(SVector{N,Int})
+    ints = zeros(NTuple{N,Int})
 
     while current_depth+1 <= tree_depth
         ints_next = unsafe_point_to_ints(regular_partitions[current_depth+2], point)

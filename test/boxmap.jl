@@ -6,16 +6,16 @@ using Test
 @testset "exported functionality" begin
     f(x) = x .^ 2
     test_points = [(-1.0, -1.0), (-1.0, 1.0), (1.0, -1.0), (1.0, 1.0)]
-    center = SVector(0.0, 0.0)
-    radius = SVector(1.0, 1.0)
+    center = (0.0, 0.0)
+    radius = (1.0, 1.0)
     domain = Box(center, radius)
     g = PointDiscretizedMap(f, domain, test_points)
     @testset "basics" begin
         @test typeof(g) <: SampledBoxMap
         partition = BoxPartition(domain, (32,32))
-        p1 = SVector(0.0, 0.0)
-        p2 = SVector(0.5, 0.0)
-        p3 = SVector(0.0, -0.5)
+        p1 = (0.0, 0.0)
+        p2 = (0.5, 0.0)
+        p3 = (0.0, -0.5)
         boxset = partition[(p1, p2, p3)]
         # re-implement a straight forward box map to have a ground truth
         # terrible implementation in any real scenario
@@ -23,9 +23,9 @@ using Test
         for box in boxset
             push!(mapped_points, f(box.center .- box.radius))
             push!(mapped_points, f(box.center .+ box.radius))
-            x = f(SVector(box.center[1] - box.radius[1], box.center[2] + box.radius[2]))
+            x = f((box.center[1] - box.radius[1], box.center[2] + box.radius[2]))
             push!(mapped_points, x)
-            y = f(SVector(box.center[1] + box.radius[1], box.center[2] - box.radius[2]))
+            y = f((box.center[1] + box.radius[1], box.center[2] - box.radius[2]))
             push!(mapped_points, y)
         end
         image = partition[mapped_points]
@@ -66,7 +66,7 @@ using Test
     end
     @testset "points in boxmaps" begin
         x = (-2.0, 3.0)
-        y = SVector(4.0, 1)
+        y = (4.0, 1.0)
         @test_throws MethodError g(x)
         @test_throws MethodError g(y)
     end

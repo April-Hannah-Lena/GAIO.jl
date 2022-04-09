@@ -18,8 +18,8 @@ using Test
     rga = relative_attractor(g, partition[:], steps = n)
     unstable = unstable_set!(g, partition_at_depth_n[:])
     # ground truths attractor and unstable set
-    x_axis = [SVector(0, x) for x in range(-1, 1, length=100)]
-    y_axis = [SVector(x, 0) for x in range(-1, 1, length=100)]
+    x_axis = [(0., x) for x in range(-1, 1, length=100)]
+    y_axis = [(x, 0.) for x in range(-1, 1, length=100)]
     gt_rga = partition_at_depth_n[y_axis]
     gt_unstable = partition_at_depth_n[x_axis]
     # make sure that the algorithms cover the ground truth (we won't have equality)

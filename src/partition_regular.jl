@@ -7,6 +7,8 @@ Internal data structure to partition a box
 
 `scale`:        1 / diameter of each box in the new partition (componentwise)
 
+`dims`:         number of boxes in each dimension
+
 `dimsprod`:     for indexing the partition:
                 key is counted up in first dimension first, then second dimension, etc... ie
 
@@ -20,19 +22,18 @@ Internal data structure to partition a box
 """
 struct BoxPartition{N,T} <: AbstractBoxPartition{Box{N,T}}
     domain::Box{N,T}
-    left::SVector{N,T}
-    scale::SVector{N,T}
-    dims::SVector{N,Int}
-    dimsprod::SVector{N,Int}
+    left::NTuple{N,T}
+    scale::NTuple{N,T}
+    dims::NTuple{N,Int}
+    dimsprod::NTuple{N,Int}
 end
 
 function BoxPartition(domain::Box{N,T}, dims::NTuple{N,Int}) where {N,T}
-    dims = SVector{N,Int}(dims)
     left = domain.center .- domain.radius
     scale = dims ./ (2 .* domain.radius)
     # nr. of boxes / diameter of the domain == 1 / diameter of each box
-    dimsprod_ = [SVector(1); cumprod(dims)]
-    dimsprod = dimsprod_[SOneTo(N)]
+    dimsprod_ = vcat(1, cumprod(dims)...)
+    dimsprod = NTuple{N,Int}(dimsprod_[Base.OneTo(N)])
 
     return BoxPartition(domain, left, scale, dims, dimsprod)
 end
@@ -55,7 +56,7 @@ keytype(::Type{<:BoxPartition}) = Int
 keys_all(partition::BoxPartition) = 1:prod(partition.dims)
 # == 1 : partition.dimsprod[end] * partition.dims[end]
 
-Base.size(partition::BoxPartition) = partition.dims.data # .data returns as tuple
+Base.size(partition::BoxPartition) = partition.dims 
 
 function Base.show(io::IO, partition::BoxPartition) 
     print(io, "$(partition.dims[1])")
