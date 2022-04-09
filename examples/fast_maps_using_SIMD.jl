@@ -16,6 +16,7 @@ function f(x)
     )
     return dx
 end
+
 F(x) = rk4_flow_map(f, x)
 
 # Internally, GAIO calls this function on a set of test points
@@ -23,6 +24,7 @@ F(x) = rk4_flow_map(f, x)
 # If your function only uses "basic" instructions, then it is
 # possible to simultaneously apply 
 # Single Instructions to Multiple Data (SIMD).
+# This way less total function calls have to be made, saving time.
 
 # To see which instructions are supported, refer to 
 # https://github.com/eschnett/SIMD.jl.git

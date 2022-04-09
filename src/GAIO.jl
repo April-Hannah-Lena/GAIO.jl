@@ -12,9 +12,8 @@ using ForwardDiff
 using Arpack
 using Base.Threads
 using MuladdMacro
-using SIMD
 using HostCPUFeatures
-using CUDA
+using SIMD
 
 using GLMakie
 

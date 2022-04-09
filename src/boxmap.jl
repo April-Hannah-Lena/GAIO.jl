@@ -84,9 +84,9 @@ function AdaptiveBoxMap(f, domain::Box{N,T}) where {N,T}
     return SampledBoxMap(f, domain, domain_points, image_points, nothing)
 end
 
-function map_boxes(g::BoxMap, source::BoxSet)
+@inbounds function map_boxes(g::BoxMap, source::BoxSet)
     P, keys = source.partition, collect(source.set)
-    image = fill( Set{eltype(keys)}(), nthreads() )
+    image = [ Set{eltype(keys)}() for _ in  1:nthreads() ]
     @threads for key in keys
         box = key_to_box(P, key)
         c, r = box.center, box.radius
@@ -103,20 +103,19 @@ function map_boxes(g::BoxMap, source::BoxSet)
     return BoxSet(P, union(image...))
 end
 
-function map_boxes(g::SampledBoxMap{N,T,Val{:cpu}}, source::BoxSet) where {N,T}
+@inbounds function map_boxes(g::SampledBoxMap{N,T,Val{:cpu}}, source::BoxSet) where {N,T}
     P, keys = source.partition, collect(source.set)
-    image = fill( Set{eltype(keys)}(), nthreads() )
-    test_points = g.domain_points(P.domain.center, P.domain.radius)
-    n, simd = length(test_points), pick_vector_width(T)
+    image = [ Set{eltype(keys)}() for _ in  1:nthreads() ]
+    points = g.domain_points(P.domain.center, P.domain.radius)
+    n, simd = length(points), pick_vector_width(T)
     @threads for key in keys
         box = key_to_box(P, key)
         c, r = box.center, box.radius
         for i in 0:simd:n-simd
-            points = tuple_vgather(view(test_points, i+1:i+simd), simd)
-            points = @muladd points .* r .+ c
-            points = g.map(points)
-            keys = point_to_key(P, points)
-            push!(image[threadid()], keys...)
+            p = tuple_vgather(view(points, i+1:i+simd), simd)
+            fp = g.map(@muladd p .* r .+ c)
+            hits = point_to_key(P, fp)
+            push!(image[threadid()], hits...)
         end
     end
     return BoxSet(P, union(image...))
