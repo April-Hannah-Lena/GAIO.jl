@@ -1,5 +1,6 @@
 using GAIO
 using StaticArrays
+using HostCPUFeatures
 using Test
 
 @testset "exported functionality" begin
@@ -36,6 +37,7 @@ using Test
         @test length(union(image, mapped1)) == length(intersect(image, mapped1))
     end
     g = PointDiscretizedMap(f, domain, test_points, Val(:cpu))
+    @show simd = pick_vector_width(Float64)
     @testset "basics with :cpu" begin
         @test typeof(g) <: SampledBoxMap
         partition = BoxPartition(domain, (32,32))
