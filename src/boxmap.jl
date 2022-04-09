@@ -24,28 +24,30 @@ struct SampledBoxMap{N,T,B} <: BoxMap
     acceleration::B
 end
 
-function SampledBoxMap(map, domain, domain_points, image_points)
-    SampledBoxMap(map, domain, domain_points, image_points, nothing)
-end
-function SampledBoxMap(map, domain::Box{N,T}, domain_points, image_points, accel::Symbol) where {N,T}
-    SampledBoxMap(map, domain, domain_points, image_points, Val(accel))
-end
-
 function Base.show(io::IO, g::BoxMap)
     center, radius = g.domain.center, g.domain.radius
     n = length(g.domain_points(center, radius))
     print(io, "BoxMap with $(n) sample points")
 end
 
-function PointDiscretizedMap(map, domain, points::AbstractArray{T,N}, accel=nothing) where {N,T}
-    if accel isa Val{:cpu}
-        n = length(points)
-        simd = pick_vector_width(T)
-        @assert n%simd==0 "Number of test points $n is not divisible by SIMD capability $(simd)"
-    end
+function PointDiscretizedMap(map, domain, points, accel=nothing)
     domain_points(center, radius) =  points
     image_points(center, radius) = center
     return SampledBoxMap(map, domain, domain_points, image_points, accel)
+end
+
+function GAIO.PointDiscretizedMap(map, domain, points, accel::Val{:cpu})
+    n = length(points)
+    T = eltype(points[1])
+    simd = pick_vector_width(T)
+    @assert n%simd==0 "Number of test points $n is not divisible by SIMD capability $(simd)"
+    domain_points(center, radius) =  points
+    image_points(center, radius) = center
+    return SampledBoxMap(map, domain, domain_points, image_points, accel)
+end
+
+function GAIO.PointDiscretizedMap(map, domain, points, accel::Symbol)
+    return PointDiscretizedMap(map, domain, points, Val(accel))
 end
 
 function BoxMap(map, domain::Box{N,T}, accel=nothing; no_of_points::Int=4*N*pick_vector_width(T)) where {N,T}
@@ -106,13 +108,14 @@ end
 @inbounds function map_boxes(g::SampledBoxMap{N,T,Val{:cpu}}, source::BoxSet) where {N,T}
     P, keys = source.partition, collect(source.set)
     image = [ Set{eltype(keys)}() for _ in  1:nthreads() ]
-    points = g.domain_points(P.domain.center, P.domain.radius)
-    n, simd = length(points), pick_vector_width(T)
+    points = tuple_vgather(
+        g.domain_points(P.domain.center, P.domain.radius),
+        pick_vector_width(T)
+    )
     @threads for key in keys
         box = key_to_box(P, key)
         c, r = box.center, box.radius
-        for i in 0:simd:n-simd
-            p = tuple_vgather(view(points, i+1:i+simd), simd)
+        for p in points
             fp = g.map(@muladd p .* r .+ c)
             hits = point_to_key(P, fp)
             push!(image[threadid()], hits...)
