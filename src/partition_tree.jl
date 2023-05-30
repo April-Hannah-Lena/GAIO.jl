@@ -34,6 +34,11 @@ Methods implemented:
 struct TreePartition{N,T,I,V<:AbstractArray{Node{I}}} <: AbstractBoxPartition{Box{N,T}}
     domain::Box{N,T}
     nodes::V
+    max_depth::Int
+end
+
+function TreePartition(domain::Box{N,T}, nodes::V) where {N,T,I,V<:AbstractArray{Node{I}}}
+    TreePartition(domain, nodes, typemax(Int))
 end
 
 function TreePartition(domain::Box, depth::Integer)
@@ -76,7 +81,7 @@ Base.copy(tr::TreePartition) = TreePartition(tr.domain, copy(tr.nodes))
 Base.length(tr::TreePartition) = length(keys(tr))
 Base.sizehint!(tr::TreePartition, s) = sizehint!(tr.nodes, s)
 
-function tree_search(tree::TR, point, max_depth=Inf) where {N,T,I,TR<:TreePartition{N,T,I}}
+function tree_search(tree::TR, point, max_depth=tree.max_depth) where {N,T,I,TR<:TreePartition{N,T,I}}
     point in tree.domain || return nothing, 1
     
     # start at root
@@ -114,8 +119,8 @@ function Base.checkbounds(::Type{Bool}, tree::TreePartition, key)
     return search_depth > depth || ( search_depth == depth && search_cart == cart )
 end
 
-function point_to_key(tree::TreePartition, point)
-    key, _ = tree_search(tree, point)
+function point_to_key(tree::TreePartition, point, depth=tree.max_depth)
+    key, _ = tree_search(tree, point, depth)
     return key
 end
 

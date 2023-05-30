@@ -15,6 +15,7 @@ using IntervalArithmetic
 
 # graph / linear algebra algorithms
 using Graphs
+using MetaGraphsNext
 using SparseArrays
 using Arpack
 

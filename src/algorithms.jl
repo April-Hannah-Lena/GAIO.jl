@@ -380,6 +380,23 @@ function box_dimension(boxsets)
     return D
 end
 
+function topological_entropy(P::AbstractBoxPartition, G::BoxGraph, base=2)
+    R = right_resolving_representation(P, G)
+    A = adjacency_matrix(R)
+
+    I, J, _ = findnz(A)
+    for (i, j) in zip(I, J)
+        H, H♯ = label_for(R, i), label_for(R, j)
+        num_edges = length(R[H, H♯])
+        A[i, j] = num_edges
+    end
+    @debug "weighted adjacency matrix" A
+
+    λ, _ = eigs(A)
+    @debug "eigs" λ
+    return log(base, maximum(real, λ))
+end
+
 # Runge-Kutta scheme of 4th order
 const half, sixth, third = Float32.((1/2, 1/6, 1/3))
 

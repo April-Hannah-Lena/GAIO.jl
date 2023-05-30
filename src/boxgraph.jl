@@ -185,7 +185,7 @@ function Graphs.outneighbors(g::BoxGraph, v::Integer)
     # we do it this way to ensure that the result is type stable
     iterrange = 1 ≤ v ≤ n ? nzrange(g.gstar.mat, v) : (1:0)
 
-    return [ row_to_index(g, row) for row in @view(rows[iterrange]) ]
+    return Int[ row_to_index(g, row) for row in @view(rows[iterrange]) ]
 end
 
 #Graphs.inneighbors(g::BoxGraph,  u::Integer) = findall(!iszero, g.gstar.mat[u, :])
@@ -194,7 +194,7 @@ function Graphs.inneighbors(g::BoxGraph, u::Integer)
     rows = rowvals(g.gstar.mat)
     colptr = SparseArrays.getcolptr(g.gstar.mat)
     j = index_to_row(g, u)
-    return [ findfirst(>(i), colptr) - 1 for (i, row) in enumerate(rows) if row == j ]
+    return Int[ findfirst(>(i), colptr) - 1 for (i, row) in enumerate(rows) if row == j ]
 end
 
 function union_strongly_connected_components(g::BoxGraph)
@@ -237,3 +237,139 @@ function Graphs.SimpleDiGraph(gstar::TransferOperator)
 end
 
 Graphs.SimpleDiGraph(g::BoxGraph) = SimpleDiGraph(g.gstar)
+
+function right_resolving_representation(P::PT1, G::BoxGraph) where {PT1<:AbstractBoxPartition}
+    R = MetaGraph(
+        DiGraph(); 
+        label_type = Set{Int}, # hypernodes represented by sets of vertices of G
+        edge_data_type = Set{keytype(PT1)}, # hyperarcs represented by sets of keys of A
+        graph_data = "right-resolving representation"
+    )
+
+    R[Set((nv(G),))] = nothing  # add first vertex of G as hypernode
+    to_prune = [1]
+
+    while !isempty(to_prune)
+
+        to_search = subshift_search(G, R)    
+        while !isempty(to_search)
+            subshift_extend!(P, G, R, to_search) 
+        end
+
+        to_prune = [label_for(R, i) for i in Graphs.vertices(R) if isempty(inneighbors(R, i))]
+        #@debug "prune queue" to_prune
+        for H in to_prune
+            delete!(R, H)
+        end
+        
+        #@debug "graph so far" R
+    end
+
+    return R
+end
+
+function subshift_search(G::BoxGraph, R::MetaGraph)
+    to_search = Set{Int}[]
+    for i in Graphs.vertices(R)
+        isempty(outneighbors(R, i)) || continue
+        H = label_for(R, i)
+        all( j -> isempty(outneighbors(G, j)), H ) && continue
+        push!(to_search, H)
+    end
+    #@debug "search queue" to_search
+    return to_search
+end
+
+function subshift_extend!(P::PT1, G::BoxGraph, R::MetaGraph, to_search) where {PT1<:AbstractBoxPartition}
+    Q = G.gstar.domain.partition
+    H = pop!(to_search)
+    seen_labels = Dict{keytype(PT1),typeof(H)}()
+            
+    for i in H
+        u = index_to_key(G, i)
+        c, _ = key_to_box(Q, u)
+        lab = point_to_key(P, c)
+        #H♯ = get(seen_labels, lab, Set{Int}())
+        H♯ = haskey(seen_labels, lab) ? seen_labels[lab] : Set{Int}()
+        seen_labels[lab] = union!(H♯, outneighbors(G, i))
+    end
+
+    for (lab, H♯) in seen_labels
+        isempty(H♯) && continue
+        if !haskey(R, H♯)
+            R[H♯] = nothing
+            push!(to_search, H♯)
+        end
+        add_lab = haskey(R, H, H♯) ? R[H, H♯] : Set{keytype(PT1)}()
+        R[H, H♯] = push!(add_lab, lab)
+    end
+end
+
+#=
+
+function labelled_graph(P::AbstractBoxPartition, G::BoxGraph)
+    Q = G.gstar.domain.partition
+    
+    vertices_data = map(Graphs.vertices(G)) do i
+        u = index_to_key(G, i)
+        u => nothing
+    end
+
+    edges_data = map(Graphs.edges(G)) do e
+        i, j = e.src, e.dst
+        u, v = index_to_key(G, i), index_to_key(G, j)
+        c, _ = key_to_box(Q, u)
+        label = point_to_key(P, c)
+        (u, v) => label
+    end
+    
+    return MetaGraph(G, vertices_data, edges_data, "topological Markov chain")
+end
+
+function right_resolving_representation(G::MetaGraph{<:Any,<:Any,Q2,<:Any,Q1}) where {Q1,Q2}
+    R = MetaGraph(
+        DiGraph(); 
+        label_type = Set{Q2}, # hypernodes represented by sets of keys of B
+        edge_data_type = Set{Q1}, # hyperarcs represented by sets of keys of A
+        graph_data = "right-resolving representation"
+    )
+
+    ind_1 = Set([ label_for(G, (first ∘ Graphs.vertices)(G)) ])
+    R[ind_1] = nothing
+
+    to_prune = [ (first ∘ Graphs.vertices)(R) ]
+    labels_A = Set(map(e -> G[e...], edge_labels(G)))
+
+    while !isempty(to_prune)
+        @show to_search = [i for i in Graphs.vertices(R) if isempty(outneighbors(R, i))]
+
+        while !isempty(to_search)
+            i = pop!(to_search)
+            H = label_for(R, i)
+
+            for label in labels_A
+                H♯ = Set(label_for(G, j) for u in H for j in outneighbors(G, code_for(G, u)) if G[u, label_for(G, j)] == label)
+                haskey(R, H♯) || (R[H♯] = nothing)
+
+                if haskey(R, H, H♯)
+                    lab = R[H, H♯]
+                    label_out = push!(lab, label)
+                else
+                    label_out = Set{Q1}([label])
+                end
+
+                seen = haskey(R, H♯)
+                R[H, H♯] = label_out
+                seen || push!(to_search, code_for(R, H♯))
+            end
+
+        end
+
+        @show to_prune = [i for i in Graphs.vertices(R) if isempty(inneighbors(R, i))]
+        rem_vertices!(R, to_prune)
+    end
+
+    return R
+end
+
+=#
