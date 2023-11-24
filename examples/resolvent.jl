@@ -8,7 +8,7 @@ using Plots
 f( (x,); α=2, β=-1-exp(-α) ) = ( exp(-α*x^2) + β ,)
 
 domain = Box([-0.5], [0.5])
-P = BoxPartition(domain, (500,))
+P = BoxPartition(domain, (1024,))
 S = cover(P, :)
 F = BoxMap(:interval, f, domain)
 
@@ -32,8 +32,11 @@ F♯ = TransferOperator(F, S, S)
 M = similar(F♯.mat', ComplexF64)
 M .= F♯.mat'
 
+n = size(M, 1)
+x0 = rand(ComplexF64, n) .* exp.(2pi*im .* rand(Float64, n))
+
 function res(z; kwargs...)
-    vals, rvecs, lvecs, info = svdsolve(M - z*I, 1, :SR, ComplexF64; kwargs...)
+    vals, rvecs, lvecs, info = svdsolve(M - z*I, x0, 1, :SR; kwargs...)
     return minimum(vals)
 end
 
