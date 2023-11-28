@@ -1,11 +1,19 @@
 using GAIO
-using SparseArrays, LinearAlgebra, KrylovKit, ProgressMeter
+using SparseArrays, LinearAlgebra, KrylovKit
+using ProgressMeter, Base.Threads, Serialization
 using DSP
-using Plots
+
+using GLMakie
+const Box = GAIO.Box
 
 # --------------------------------
 
-f( (x,); α=2, β=-1-exp(-α) ) = ( exp(-α*x^2) + β ,)
+f( x::Real; α=2, β=-1-exp(-α) ) = exp(-α*x^2) + β
+f( (x,); kwargs... ) = ( f(x; kwargs...) ,)
+
+fig, ax, ms = plot(-1:0.001:0, f, color=:blue);
+ms = plot!(ax, -1:0.001:0, identity, color=:green)
+fig
 
 domain = Box([-0.5], [0.5])
 P = BoxPartition(domain, (1024,))
@@ -14,16 +22,26 @@ F = BoxMap(:interval, f, domain)
 
 # ---------------------------------
 
-f(z; α=-1.7) = exp(-2*pi*im/3) * ( (abs(z)^2 + α)*z + conj(z)^2 / 2 )
-fr((x, y)) = reim( f(x + y*im) )
+function f( x::Real; s=4-1/8 )
+    if 0 ≤ x < 1/4
+        2x
+    elseif 1/4 ≤ x < 1/2
+        s * (x - 1/4)
+    elseif 1/2 ≤ x < 3/4
+        s * (x - 3/4) + 1
+    elseif 3/4 ≤ x ≤ 1
+        2 * (x - 1) + 1
+    else
+        @error "how did you get here" x
+    end
+end
 
-c, r = (0, 0), (1.5, 1.5)
-domain = Box(c, r)
-P = BoxPartition(domain, (128,128))
-F = BoxMap(:interval, fr, domain)
+f( (x,); s... ) = ( f(x; s...) ,)
 
-S = cover(P, (0,0))
-S = unstable_set(F, S)
+domain = Box([0.5], [0.5])
+P = BoxPartition(domain, (1024,))
+S = cover(P, :)
+F = BoxMap(:grid, f, domain)
 
 # ---------------------------------
 
@@ -40,39 +58,52 @@ function res(z; kwargs...)
     return minimum(vals)
 end
 
-xs = -1.1:0.05:1.1
-R = @showprogress broadcast(xs', xs) do x, y
-    res(x+y*im)
+xs = -1.1:0.005:1.1
+R = ones(Float64, length(xs), length(xs))
+
+prog = Progress(length(R))
+@threads for cart in CartesianIndices(R)
+    i, j = Tuple(cart)
+    z = xs[i] + xs[j] * im
+
+    R[cart] = res(z)
+    next!(prog)
 end
 
-using Serialization
+#=R = @showprogress broadcast(xs', xs) do x, y
+    res(x+y*im)
+end=#
+
 serialize("resolvents.ser", R)
 R = deserialize("resolvents.ser")
 
 # remove basically-0 revolvents
 R̄ = R
-R̄[R̄ .< 1e-9] .= 1e-9
+#R̄[R̄ .> 3e-1] .= 3e-1
 
 # smoothing
-A = 0.25 * [1 1;
-            1 1]
+#A = 0.25 * [1 1;
+#            1 1]
 
-R̄ = conv(R̄, A)[1:end-1, 1:end-1]
+#R̄ = conv(R̄, A)[1:end-1, 1:end-1]
 
-ticks = -9:1:0
+ticks = -8:1:-1
 labs = ["10^$x" for x in ticks]
 
-p = contourf(
-    xs, xs, log10.(R̄), 
-    levels=9, #clabels=true,
-    colorbar_ticks=(ticks,labs)
-)
+fig, ax, ms = contour(xs, xs, log10.(R̄)) 
+ms = scatter!(ax, real.(λ), imag.(λ), color=:blue)
 
-heatmap(xs, xs, log10.(R))
+p2 = heatmap(xs, xs, log10.(R̄))
 
-λ, ev, nconv = eigs(F♯, nev=128)
+λ, ev, nconv = eigs(F♯, nev=100, which=:LM)
 
-scatter!(real.(λ), imag.(λ), color=:blue)
-for r in 1:0.1:0.1
-    plot!(map(t -> r .* (cos(t), sin(t)), 0:0.01:2π))
-end
+resolvents = @showprogress map(res, λ)
+
+serialize("eigresolvents.ser", resolvents)
+resolvents = deserialize("eigresolvents.ser")
+
+fig = Figure();
+ax = Axis3(fig[1,1], aspect=(1,1,1))
+ms = surface!(ax, xs, xs, log10.(R̄), colormap=(:viridis, 0.5))
+ms = scatter!(ax, real.(λ), imag.(λ), log10.(resolvents), color=:blue)
+fig
