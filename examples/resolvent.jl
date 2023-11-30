@@ -16,7 +16,7 @@ ms = plot!(ax, -1:0.001:0, identity, color=:green)
 fig
 
 domain = Box([-0.5], [0.5])
-P = BoxPartition(domain, (1024,))
+P = BoxPartition(domain, (1024,)) 
 S = cover(P, :)
 F = BoxMap(:interval, f, domain)
 
@@ -87,6 +87,17 @@ R̄ = R
 
 #R̄ = conv(R̄, A)[1:end-1, 1:end-1]
 
+λ, ev, nconv = eigs(F♯, nev=100, which=:LM)
+
+resolvents = @showprogress map(res, λ)
+
+serialize("eigresolvents.ser", resolvents)
+resolvents = deserialize("eigresolvents.ser")
+
+perm = sortperm(resolvents)
+λ .= λ[perm]
+resolvents .= resolvents[perm]
+
 ticks = -8:1:-1
 labs = ["10^$x" for x in ticks]
 
@@ -95,15 +106,31 @@ ms = scatter!(ax, real.(λ), imag.(λ), color=:blue)
 
 p2 = heatmap(xs, xs, log10.(R̄))
 
-λ, ev, nconv = eigs(F♯, nev=100, which=:LM)
-
-resolvents = @showprogress map(res, λ)
-
-serialize("eigresolvents.ser", resolvents)
-resolvents = deserialize("eigresolvents.ser")
-
 fig = Figure();
 ax = Axis3(fig[1,1], aspect=(1,1,1))
 ms = surface!(ax, xs, xs, log10.(R̄), colormap=(:viridis, 0.5))
 ms = scatter!(ax, real.(λ), imag.(λ), log10.(resolvents), color=:blue)
+fig
+
+ys = -0.05:0.01:0.05
+Ri = ones(length(ys), length(ys), 20)
+for i in axes(Ri, 3)
+    indices = CartesianIndices(Ri[:, :, i])
+    prog = Progress( length(indices) )
+    @threads for cart in indices
+        j, k = Tuple(cart)
+        z = ys[j] + ys[k] * im
+        z += λ[i]
+
+        Ri[j, k, i] = res(z)
+        next!(prog)
+    end
+
+    global ms = surface!(ax, 
+        real(λ[i]) .+ ys, 
+        imag(λ[i]) .+ ys,
+        log10.(Ri[:, :, i]),
+        colormap=(:viridis, 0.5)
+    )
+end
 fig
