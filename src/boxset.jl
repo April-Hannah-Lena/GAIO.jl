@@ -309,6 +309,8 @@ function neighborhood(B::BoxSet{R,Q}) where {N,R,Q<:BoxPartition{N}}
     return setdiff!(C, B)
 end
 
+const nbhd = neighborhood
+
 """
     marginal(B::BoxSet{Box{N}}; dim) -> BoxSet{Box{N-1}}
 

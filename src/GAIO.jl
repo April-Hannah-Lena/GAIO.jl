@@ -64,25 +64,7 @@ export seba, partition_unity, partition_disjoint, partition_likelihood
 
 # ENV["JULIA_DEBUG"] = all
 
-const SVNT{N,T} = Union{<:NTuple{N,T}, <:StaticVector{N,T}}
-const default_box_color = :red # default color for plotting
-
-# we need a small helper function because of 
-# how julia dispatches on `union!`
-⊔(set1::AbstractSet, set2::AbstractSet) = union!(set1, set2)
-⊔(set1::AbstractSet, object) = union!(set1, (object,))
-⊔(set1::AbstractSet, ::Nothing) = set1
-
-⊔(d::AbstractDict...) = mergewith!(+, d...)
-⊔(d::AbstractDict, p::Pair...) = foreach(q -> d ⊔ q, p)
-⊔(d::AbstractDict, ::Nothing) = d
-⊔(d::AbstractDict, ::Pair{<:Tuple{Nothing,<:Any},<:Any}) = d
-
-function ⊔(d::AbstractDict, p::Pair)
-    k, v = p
-    d[k] = haskey(d, k) ? d[k] + v : v
-    d
-end
+include("safety.jl")
 
 include("box.jl")
 
@@ -109,8 +91,6 @@ include("algorithms/seba.jl")
 include("algorithms/morse_graph.jl")
 include("algorithms/conley_index.jl")
 include("algorithms/maps.jl")
-
-const nbhd = neighborhood
 
 include("precompile.jl")
 

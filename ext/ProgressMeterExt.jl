@@ -3,18 +3,19 @@ module ProgressMeterExt
 using GAIO, ProgressMeter, IntervalArithmetic, StaticArrays, FLoops#, SIMD
 
 import GAIO: typesafe_map, map_boxes, construct_transfers, ⊔, SVNT
+import GAIO: @interruptable
 
 # IntervalBoxMap
 
 function map_boxes(
         g::IntervalBoxMap, source::BS,
         show_progress::Val{true}
-    ) where {B,Q,S,BS<:BoxSet{B,Q,S}}
+    ) where {B<:Box,Q<:AbstractBoxPartition{B},S<:AbstractSet,BS<:BoxSet{B,Q,S}}
 
     prog = Progress(length(source)+1; desc="Computing image...", showspeed=true)
 
     P = source.partition
-    @floop for box in source
+    @interruptable @floop for box in source
         c, r = box
         minced = mince(box, g.n_subintervals(c, r))
 

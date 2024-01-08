@@ -63,7 +63,7 @@ function map_boxes(
     ) where {B,Q,S,BS<:BoxSet{B,Q,S}}
 
     P = source.partition
-    @floop for box in source
+    @interruptable @floop for box in source
         c, r = box
         for subint in mince(box, g.n_subintervals(c, r))
             fint = typesafe_map(g, subint)
