@@ -19,13 +19,13 @@ bibliography: paper.bib
 
 # Summary
 
-GAIO (Global Analysis of Invariant Objects) is a software package for set
-oriented computations in dynamical systems. These include isolating attractors,
-discretizing invariant measures and computing their transfer behaviors, among
-others. The algorithms that make up GAIO have been rebuilt from the ground up
-using the Julia programming language; the result is a package in which 
-pseudocode can be written verbatim and executed with performance beating 
-the Matlab implementation. 
+GAIO (Global Analysis of Invariant Objects) is a software package implementing 
+Ulam's method for dynamical systems. GAIO's uses in analysis include isolating 
+attractors, discretizing invariant measures and computing their transfer 
+behaviors, among others. The algorithms that make up GAIO have been rebuilt 
+from the ground up using Julia; the result is a package in which pseudocode 
+can be written verbatim and executed with performance beating the Matlab 
+implementation. 
 
 # Statement of need
 
