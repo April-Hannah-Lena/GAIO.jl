@@ -108,7 +108,53 @@ initialize the corresponding `BoxMap` `F` by
 ```@repl 1
 F = BoxMap(f, Q)
 ```
-This will generate a `BoxMap` which attempts to calculate setwise images of `f`. There are many types of `BoxMap` discretizations available, see the section on BoxMaps for more information. 
+This will generate a `BoxMap` which attempts to calculate setwise images of `f`. One can also use a `DynamicalSystem` from `DynamicalSystems.jl`: 
+```@repl 1
+using DynamicalSystems: DiscreteDynamicalSystem
+using StaticArrays
+
+dynamic_rule(u::Vec, p, t) where Vec = Vec( f(u) ) # DynamicalSystems.jl syntax
+
+u0 = SA_F64[0, 0]   # this is dummy data
+p0 = SA_F64[0, 0]   # parameters, in case they are needed
+
+system = DiscreteDynamicalSystem(dynamic_rule, u0, p0)
+
+F̃ = BoxMap(system, Q)
+```
+The same works for a continuous dynamical system. 
+
+!!! warning "Maps based on `DynamicalSystem`s cannot run on the GPU!"
+    Currently, you must hard-code your systems, and cannot rely on `DifferentialEquations` or `DynamicalSystems` for GPU-acceleration. 
+
+!!! warning "Check your time-steps!"
+    GAIO.jl ALWAYS performs integration over **one** time unit! To perform smaller steps, rescale your dynamical system accordingly!
+
+```@repl 1
+using DynamicalSystems: ContinuousDynamicalSystem
+using OrdinaryDiffEq
+
+function lorenz_dudx(u::Vec, p, t, Δt) where Vec
+    x,y,z = u
+    σ,ρ,β = p
+
+    dudx = Vec(( σ*(y-x), ρ*x-y-x*z, x*y-β*z ))
+    return Δt * dudx
+end
+
+Δt = 0.2
+lorenz(u, p=p0, t=0) = lorenz_dudx(u, p, t, Δt)
+
+u0 = SA_F64[0, 0, 0]
+p0 = SA_F64[10, 28, 0.4]
+diffeq = (alg = RK4(), dt = 1/20, adaptive = false)
+
+lorenz_system = ContinuousDynamicalSystem(lorenz, u0, p0; diffeq)
+
+Q̄ = Box((0,0,25), (30,30,30))
+F̄ = BoxMap(lorenz_system, Q̄)
+```
+By default, GAIO.jl will try to adaptively choose test points to compute setwise images by approximating the (local) Lipschitz constant of the map. There are many other types of `BoxMap` discretizations available, see the section on BoxMaps for more information. 
 
 ## Using BoxMap
 
@@ -132,7 +178,7 @@ The _Perron-Frobenius operator_ (or _transfer operator_) [lasotamackey](@cite) i
 B = cover(P, :)
 T = TransferOperator(F, B)   # T operates on the domain covered by the box set B
 ```
-In this case, the codomain is generated automatically. This is not always ideal (e.g. in eigenvalue calculations), so the codomain can be specified as the third argument
+In this case, the codomain is generated automatically. This is not always ideal (e.g. in eigenvalue calculations), so the codomain should often be specified as the third argument
 ```@repl 1
 T = TransferOperator(F, B, B)
 ```
@@ -167,11 +213,28 @@ Of course, the same holds for the the Koopman operator as well.
 ```@repl 1
 ν = T'μ
 ```
+To evaluate the measure over a given domain one can call the `BoxFun` on a `Box` or `BoxSet`
+```@repl 1
+B
+μ(B)
+```
+Similarly one can approximately integrate a function by a (weighted) summ of the function's values over the support of the `BoxFun`
+```@repl 1
+sum(sin, μ)
+```
+Marginal distributions can be accessed using the `marginal` function
+```@repl 1
+marginal(μ; dim=1)
+```
+The measures can also be associated with a (Lebesgue) density
+```@repl 1
+p = density(μ)
+```
 Since a measure ``\mu`` is a function defined over measurable sets, composite measures ``g \circ \mu`` are well-defined for functions ``g : \mathbb{R} \to \mathbb{R}`` (or ``g : \mathbb{C} \to \mathbb{C}``). This is supported in GAIO.jl for `BoxFuns`
 ```@repl 1
 η = exp ∘ μ
 ```
-For multiple BoxFuns, e.g. as the result of calling `eigs(T)`, the concatenation operator `∘` can be applied to each one using julia's broadcasting functionality
+For multiple BoxFuns, the concatenation operator `∘` can be applied to each one using julia's broadcasting functionality
 ```@repl 1
 real_ev = real .∘ ev
 ```
@@ -179,6 +242,15 @@ Similarly, finite signed measures can be given a vector space structure. This is
 ```@repl 1
 ν + μ
 2ν - μ/2
+```
+A `BoxFun` is effectively a dictionary of boxes and weights
+```
+Iterators.take(μ, 3)
+```
+To access this structure oneself one can call
+```
+P = μ.partition
+key_val_pairs = pairs(μ)
 ```
 
 ## Graphs of Boxes
