@@ -1,0 +1,45 @@
+% JuliaCon proceedings template
+\documentclass{juliacon}
+\setcounter{page}{1}
+
+\begin{document}
+
+\input{header}
+
+\maketitle
+
+\begin{abstract}
+
+GAIO (Global Analysis of Invariant Objects) is a package for set oriented numerics in dynamical systems. It provides algorithms for discretisation of the Koopman operator among other uses. The Koopman operator has been of much interest in the last decade, since it can be used in order to compute, e.g., almost invariant, cyclic and coherent sets (to name just some uses). Originally written in the 90s in C, GAIO has been redesigned in Julia and is concise, while outperforming the original.
+
+\end{abstract}
+
+\section{Introduction}
+
+A dynamical system can be characterised by a set of global asymptotic behavoirs. These include stability, invariance of certain regions of phase space, as well as statistical behavior of "typical" trajectories. Such topological and statistical questions (among others) can be ansered using a \emph{set-oriented} approach. 
+
+This paper presents a Julia language implementation of such a set-oriented approach to numerical analysis, encapsulated in the package GAIO.jl. The data structures and the algorithmic interface have been completely redesigned such that the code for the algorithms is very concise and close to their mathematical pseudocode. At the same time, the performance is equal or better than that of the original C and Matlab versions. 
+
+\section{Dynamical Systems, Invariant Sets and Measures}
+
+- dynamical system
+
+\subsection{Attractors}
+
+- relative attractor (thomas attractor example)
+
+\subsection{(Almost-) Invariant Measures}
+
+- transfer operator (thomas attractor example)
+
+\section{GAIO in the Julia Language}
+
+- comparison of julia relative attractor and matlab relative attractor
+
+- hooking into existing ecosystem (in particular CUDA.jl)
+
+\input{bib.tex}
+
+\end{document}
+
+% Inspired by the International Journal of Computer Applications template
