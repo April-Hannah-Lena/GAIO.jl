@@ -10,3 +10,12 @@ GAIO-remote.code-workspace
 *.DS_Store
 *logs
 *.jats
+
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
+*.xml
+*.bcf
+*.bbl
