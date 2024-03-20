@@ -30,28 +30,35 @@ begin
 end
 save("attractor.png", fig, px_per_unit=4)
 
-P2 = BoxPartition(dom, (8,8,8))
+P2 = BoxPartition(dom, (16,16,16))
 A2 = cover(P2, A)
+
+time = 2:2400
+indices = [301:2400;]
+centers = [c2 for (c2,r2) in A]
 
 begin
     fig = Figure(backgroundcolor=:transparent);
-    ax1 = Axis3(fig[1,1], aspect=(1,1,1), azimuth=5π/4, elevation=π/8, backgroundcolor=:transparent);
-    ax2 = Axis3(fig[1,2], aspect=(1,1,1), azimuth=π/16, elevation=π/16, backgroundcolor=:transparent);
-    ax3 = Axis3(fig[2,1], aspect=(1,1,1), azimuth=7π/4, elevation=3π/8, backgroundcolor=:transparent);
-    ax4 = Axis3(fig[2,2], aspect=(1,1,1), azimuth=7π/16, elevation=π/16, backgroundcolor=:transparent);
-    for box in A2
-        c2, a2 = box
+    ax1 = Axis3(fig[1,1], limits=(-5,5,-5,5,-5,5), aspect=(1,1,1), azimuth=5π/4, elevation=π/8, backgroundcolor=:transparent)
+    ax2 = Axis3(fig[1,2], limits=(-5,5,-5,5,-5,5), aspect=(1,1,1), azimuth=π/16, elevation=π/16, backgroundcolor=:transparent)
+    ax3 = Axis3(fig[2,1], limits=(-5,5,-5,5,-5,5), aspect=(1,1,1), azimuth=7π/4, elevation=3π/8, backgroundcolor=:transparent)
+    ax4 = Axis3(fig[2,2], limits=(-5,5,-5,5,-5,5), aspect=(1,1,1), azimuth=7π/16, elevation=π/16, backgroundcolor=:transparent)
+    for (c2,r2) in A2
         x = SVector{3,Float32}[c2]
-        for _ in 2:600
+        for _ in 2:2400
             push!(x, rk4_flow_map(v, x[end], 0.01, 1))
         end
-        indices = [101:600;]
+        
         x = x[indices]
-        ms1 = lines!(ax1, x, color=[indices;], colormap=(:blues, 0.25));
-        ms2 = lines!(ax2, x, color=[indices;], colormap=(:blues, 0.25));
-        ms3 = lines!(ax3, x, color=[indices;], colormap=(:blues, 0.25));
-        ms4 = lines!(ax4, x, color=[indices;], colormap=(:blues, 0.25));
+        ms5 = lines!(ax1, x, color=indices, colormap=(:blues, 0.3))
+        ms6 = lines!(ax2, x, color=indices, colormap=(:blues, 0.3))
+        ms7 = lines!(ax3, x, color=indices, colormap=(:blues, 0.3))
+        ms8 = lines!(ax4, x, color=indices, colormap=(:blues, 0.3))
     end
+    #ms1 = plot!(ax1, A, color=(:red, 0.01))
+    #ms2 = plot!(ax2, A, color=(:red, 0.01))
+    #ms3 = plot!(ax3, A, color=(:red, 0.01))
+    #ms4 = plot!(ax4, A, color=(:red, 0.01))
 end
 save("trajectories.png", fig, px_per_unit=4)
 
