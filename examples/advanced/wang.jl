@@ -35,6 +35,7 @@ A2 = cover(P2, A)
 
 time = 2:2400
 indices = [301:2400;]
+colors = [-1000; indices[1:end-1];]
 centers = [c2 for (c2,r2) in A]
 
 begin
@@ -50,10 +51,10 @@ begin
         end
         
         x = x[indices]
-        ms5 = lines!(ax1, x, color=indices, colormap=(:blues, 0.3))
-        ms6 = lines!(ax2, x, color=indices, colormap=(:blues, 0.3))
-        ms7 = lines!(ax3, x, color=indices, colormap=(:blues, 0.3))
-        ms8 = lines!(ax4, x, color=indices, colormap=(:blues, 0.3))
+        ms5 = lines!(ax1, x, color=colors, colormap=(:blues, 0.3))
+        ms6 = lines!(ax2, x, color=colors, colormap=(:blues, 0.3))
+        ms7 = lines!(ax3, x, color=colors, colormap=(:blues, 0.3))
+        ms8 = lines!(ax4, x, color=colors, colormap=(:blues, 0.3))
     end
     #ms1 = plot!(ax1, A, color=(:red, 0.01))
     #ms2 = plot!(ax2, A, color=(:red, 0.01))
