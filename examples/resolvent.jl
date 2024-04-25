@@ -11,6 +11,8 @@ const Box = GAIO.Box
 f( x::Real; α=2, β=-1-exp(-α) ) = exp(-α*x^2) + β
 f( (x,); kwargs... ) = ( f(x; kwargs...) ,)
 
+finv( y::Real; α=2, β=-1-exp(-α) ) = -sqrt( -log(y - β) / α )
+
 Df( x::Real; α=2, β=-1-exp(-α) ) = -2α*x*exp(-α*x^2)
 
 fig, ax, ms = plot(-1:0.002:0, f, color=:blue);
@@ -248,7 +250,7 @@ else
 end
 
 function residual(z, SQ=SQ, G=G, A=A, L=L)
-    λ = eigvals(SQ * (L - z * A' - conj(z) * A + abs(z)^2 * G) * SQ)
+    λ = eigvals(SQ * (L - z * A' - z' * A + abs(z)^2 * G) * SQ)
     λ0 = λ[ argmin(abs.(λ)) ]
     real(λ0) < 0 && @warn "erroneous negative residual calculated" z calculated_residual=λ0
     sqrt(max(real(λ0), 0))
