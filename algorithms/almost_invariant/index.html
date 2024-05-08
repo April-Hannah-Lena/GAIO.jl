@@ -27,12 +27,12 @@ tol, maxiter, v0 = eps()^(1/4), 1000, ones(size(T, 2))
 λ, ev = eigs(T; nev=6, which=:LR, maxiter=maxiter, tol=tol, v0=v0)
 
 λ</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">6-element Vector{ComplexF64}:
- 0.9999999999999848 + 0.0im
- 0.9782889179078966 + 0.0im
- 0.9334898586803678 + 0.08261276298775122im
- 0.9334898586803678 - 0.08261276298775122im
- 0.9300663505292138 + 0.14257243874771264im
- 0.9300663505292138 - 0.14257243874771264im</code></pre><p>We see that the first eigenvalue is approaching <span>$1$</span>. This is the invariant measure. There is also an eigenvalue <em>near, but not exactly</em> <span>$1$</span>. Let us examine this eigenmeasure a but more closely. </p><pre><code class="language-julia hljs">μ = (x -&gt; sign(x) * log(abs(x))) ∘ real ∘ ev[2]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BoxMeasure in 256 x 256 x 256 - element BoxPartition with 483819 stored weights</code></pre><pre><code class="language-julia hljs">using GLMakie
+ 0.9999999999999813 + 0.0im
+ 0.9782889179078947 + 0.0im
+ 0.9334898586803636 + 0.08261276298775118im
+ 0.9334898586803636 - 0.08261276298775118im
+ 0.9300663505292164 + 0.14257243874771158im
+ 0.9300663505292164 - 0.14257243874771158im</code></pre><p>We see that the first eigenvalue is approaching <span>$1$</span>. This is the invariant measure. There is also an eigenvalue <em>near, but not exactly</em> <span>$1$</span>. Let us examine this eigenmeasure a but more closely. </p><pre><code class="language-julia hljs">μ = (x -&gt; sign(x) * log(abs(x))) ∘ real ∘ ev[2]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BoxMeasure in 256 x 256 x 256 - element BoxPartition with 483819 stored weights</code></pre><pre><code class="language-julia hljs">using GLMakie
 
 fig = Figure();
 ax = Axis3(fig[1,1], aspect=(1,1.2,1), azimuth=-3pi/10)
@@ -44,7 +44,7 @@ ax1 = Axis3(fig[1,1], aspect=(1,1.2,1), azimuth=-3pi/10)
 ms1 = plot!(ax1, B1, color=(:blue, 0.4))
 ax2 = Axis3(fig[1,2], aspect=(1,1.2,1), azimuth=-3pi/10)
 ms2 = plot!(ax2, B2, color=(:red, 0.4))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Warning: Found `resolution` in the theme when creating a `Scene`. The `resolution` keyword for `Scene`s and `Figure`s has been deprecated. Use `Figure(; size = ...` or `Scene(; size = ...)` instead, which better reflects that this is a unitless size and not a pixel resolution. The key could also come from `set_theme!` calls or related theming functions.
-└ @ Makie ~/.julia/packages/Makie/ND0gA/src/scenes.jl:220</code></pre><p><img src="../almost_inv.png" alt="Almost Invariant Sets"/></p><pre><code class="language-julia hljs">n_frames = 120
+└ @ Makie ~/.julia/packages/Makie/iRM0c/src/scenes.jl:220</code></pre><p><img src="../almost_inv.png" alt="Almost Invariant Sets"/></p><pre><code class="language-julia hljs">n_frames = 120
 record(fig, &quot;almost_inv_rotating.gif&quot;, 1:n_frames, framerate=20) do frame
     v = sin(2pi * frame / n_frames)
     ax1.elevation[] = pi/20 - pi * v / 20
@@ -90,9 +90,9 @@ T = TransferOperator(F, S, S)
 tol, maxiter, v0 = eps()^(1/4), 1000, ones(size(T, 2))
 λ, ev = eigs(T; which=:LR, maxiter=maxiter, tol=tol, v0=v0)
 λ</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Vector{ComplexF64}:
- 0.9999999999208788 + 0.0im
- 0.9996974029726435 + 0.0im
- 0.9995772599122024 + 0.0im</code></pre><pre><code class="language-julia hljs">using Plots
+ 0.9999999999208726 + 0.0im
+ 0.9996974029726503 + 0.0im
+ 0.9995772599121882 + 0.0im</code></pre><pre><code class="language-julia hljs">using Plots
 
 p = plot(real ∘ ev[2], colormap=:jet)</code></pre><p><img src="../gyre_almost_inv.svg" alt="almost invariant sets in the doube-gyre"/></p><p>Since the map is nonautonomous, this image should change if we vary the start time <code>t₀</code>. </p><pre><code class="language-julia hljs">n_frames = 120
 times = range(t₀, t₁, length=n_frames)
@@ -113,4 +113,4 @@ anim = @animate for t in times
 
     plot(μ, clims=(-1,1), colormap=:jet)
 end;
-gif(anim, &quot;gyre_almost_inv.gif&quot;, fps=20)</code></pre><p><img src="../../assets/gyre_almost_inv.gif" alt="almost invariant sets changing over time"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../transfer_operator/">« Ulam&#39;s method and Invariant Measures</a><a class="docs-footer-nextpage" href="../cyclic/">Cyclic Sets »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.0 on <span class="colophon-date" title="Saturday 27 April 2024 10:14">Saturday 27 April 2024</span>. Using Julia version 1.9.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+gif(anim, &quot;gyre_almost_inv.gif&quot;, fps=20)</code></pre><p><img src="../../assets/gyre_almost_inv.gif" alt="almost invariant sets changing over time"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../transfer_operator/">« Ulam&#39;s method and Invariant Measures</a><a class="docs-footer-nextpage" href="../cyclic/">Cyclic Sets »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.1 on <span class="colophon-date" title="Wednesday 8 May 2024 13:13">Wednesday 8 May 2024</span>. Using Julia version 1.10.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
