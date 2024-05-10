@@ -8,6 +8,7 @@ macro exitsafe(expr)
             $(esc(expr))
         catch err
             err isa InterruptException && rethrow()
+            showerror(stdout, err)
             NaN
         end
     end
