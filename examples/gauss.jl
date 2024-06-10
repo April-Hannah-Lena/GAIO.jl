@@ -21,10 +21,24 @@ function gauss(x::Real; α=2, β=-1-exp(-α))
     exp(-α*x^2) + β
 end
 
-gauss((x,)) = (gauss(x),)
+gauss((x,); α=2, β=-1-exp(-α)) = (gauss(x; α=α, β=β),)
 
 jac_gauss(x::Real; α=2) = -2*α*x*exp(-α*x^2)
-jac_gauss((x,); α=2) = jac_gauss(x; α=α)
+jac_gauss((x,); α=2) = (jac_gauss(x; α=α),)
+
+function inv_gauss(y::Real; α=2, β=-1-exp(-α))
+    exp(-α) ≤ y - β ≤ 1  ||  throw(DomainError(y))
+    -sqrt( -log(y-β)/α )
+end
+
+inv_gauss((x,); α=2, β=-1-exp(-α)) = (inv_gauss(x; α=α, β=β),)
+
+function jac_inv_gauss(y::Real; α=2, β=-1-exp(-α))
+    exp(-α) ≤ y - β ≤ 1  ||  return 0
+    -1 / ( 2α * (y - β) * inv_gauss(y; α=α, β=β) )
+end
+
+jac_inv_gauss((x,); α=2, β=-1-exp(-α)) = SMatrix{1,1}(jac_inv_gauss(x; α=α, β=β))
 
 doubling(x::Real) = (2x % 1) + 0.05*sinpi(4x)
 doubling((x,)) = (doubling(x),)
@@ -51,13 +65,29 @@ end
 
 linear_gauss((x,)) = (linear_gauss(x),)
 
+function inv_linear_gauss(_x::Real)
+    x = _x + 1
+    p = if x < 1/4
+        5x/3
+    elseif x < 3/4
+        (x + 3/20) * 5/6
+    else
+        (x - 3/10) * 5/3
+    end
+    p - 1
+end
+
+function jac_inv_linear_gauss(_x::Real)
+    -3/4 ≤ _x < -1/4 ? 5/6 : 5/3
+end
+
 function jac_linear_gauss(_x::Real)
     x = _x + 1
     p = ( 1/4 ≤ x < 3/4 )  ?  2 : -4
     1 + p/10
 end
 
-jac_linear_gauss((x,)) = jac_linear_gauss(x)
+jac_linear_gauss((x,)) = (jac_linear_gauss(x),)
 
 ∘ⁿ(f, n) = f ∘ ( n == 1 ? identity : ∘ⁿ(f, n-1) )
 
@@ -65,17 +95,17 @@ plot(-1:0.001:0, [identity, gauss, linear_gauss], label=["identity" "Gauss Map" 
 
 savefig("../talk_GAIO.jl/maps.png")
 
-cen, rad = (-0.5,), (0.5,)
+cen, rad = (0.5,), (0.5,)
 dom = Box(cen, rad)
-P = BoxPartition(dom, (1024,))
+P = BoxPartition(dom, (128,))
 S = cover(P, :)
 
 xs = -1.05:0.05:1.2
 ys = -1.05:0.05:1.1
 
 function res_ulam(
-        f = linear_gauss, 
-        Df = jac_linear_gauss, 
+        f = gauss, 
+        D_invf = jac_inv_gauss, 
         S = S, 
         xs = xs, 
         ys = ys
@@ -85,16 +115,16 @@ function res_ulam(
     F♯ = TransferOperator(F, S, S)
     S = F♯.domain
 
-    λ, ev, nconv = eigs(F♯, nev=100)
+    λ, ev, nconv = eigs(F♯', nev=100)
 
     # easy because all same, otherwise use vector
     vols = volume(first(S)) #[volume(Ai) for Ai in S]
     G = UniformScaling(vols) #Diagonal(vols)
 
-    A = sparse(F♯) * G
+    A = sparse(F♯)' * G
 
     # easy because const on boxes, otherwise we need some quadrature rule
-    L = Diagonal([ 1/Df(c) for (c,r) in S ]) * G
+    L = Diagonal([ det(D_invf(c)) for (c,r) in S ]) * G
 
     function residual(z, G=G, A=A, L=L)
         ξ#=, _=# = eigvals( 
@@ -122,18 +152,21 @@ end
 leg(x::AbstractFloat, R=256) = collectPl(x; norm=Val(:normalized), lmax = R-1)
 leg(::Val{R}) where R = x -> leg(x, R)
 
-nodes, weights = gausslegendre(1024)
+nodes, weights = gausslegendre(4096)
+
+nodes = [-1:0.01:1;]
+weights = ones(length(nodes)) ./ length(nodes)
 
 function res_dmd(
-        f = linear_gauss,
+        f = mob,
         nodes = nodes,
         weights = weights,
-        basis = leg(Val(64)),#x -> [1; cospi.(2x .* (1:10)); sinpi.(2x .* (1:10))],
+        basis = leg(Val(32)),#x -> [1; sqrt(2)*cospi.(x .* (1:80)); sqrt(2)*sinpi.(x .* (1:80))],
         xs = xs, 
         ys = ys
     )
     
-    data = 2 .* f.( (nodes .- 1) ./ 2 ) .+ 1
+    data = 2 .* f.( (nodes .+ 1) ./ 2 ) .- 1
 
     ΨX = reduce(hcat, basis.(nodes))'
     ΨY = reduce(hcat, basis.(data))'
@@ -171,7 +204,7 @@ end
 r_ulam, λ_ulam = res_ulam()
 r_dmd, λ_dmd = res_dmd()
 
-levels = [0.001; 0.005; 0.01; 0.02; 0.05; 0:0.1:1;]
+levels = [0.00001; 0.0001; 0.001; 0.005; 0.01; 0.02; 0.05; 0:0.1:1;]
 
 p1 = contour(
     xs, ys, r_ulam, 
@@ -185,26 +218,70 @@ p2 = contour(
     xs, ys, r_dmd, 
     levels=levels, aspectratio=1., colormap=:rainbow, clabels=true
 )
-scatter!(λ_ulam, label="Ulam eigs", marker=:xcross)
+#scatter!(λ_ulam, label="Ulam eigs", marker=:xcross)
 scatter!(λ_dmd, label="EDMD eigs", marker=:cross)
 plot!(cospi.(0:0.01:2), sinpi.(0:0.01:2), style=:dash, label="|z| = 1")
-#scatter!(ComplexF64[((-0.8*exp(2π*im/9)) .^ (1:10)); ((-0.8*exp(-2π*im/9)) .^ (1:10))], marker=:xcross)
+scatter!(ComplexF64[((0.8*exp(2π*im/9)) .^ (1:10)); ((0.8*exp(-2π*im/9)) .^ (1:10))], marker=:xcross)
 
 plot(p1, p2, size=(1200,600))
 
-savefig("../talk_GAIO.jl/pseudospectrum_comparison_gauss.png")
+savefig("../../Desktop/pseudospectrum_comparison_gauss4.png")
 
 
-anim = @animate for n_basis in [32, 64, 128, 256]
+anim = @animate for n_basis in round.(Int, 2 .^ (4.5:0.5:9))
     n_points = 4*n_basis
     nodes, weights = gausslegendre(n_points)
-    r_dmd, λ_dmd = res_dmd(mob, nodes, weights, leg(Val(n_basis)))
+    r_dmd, λ_dmd = res_dmd(gauss, nodes, weights, leg(Val(n_basis)))
     p3 = contour(
         xs, ys, r_dmd, 
         levels=levels, aspectratio=1., colormap=:rainbow, clabels=true,
         title="$n_basis legendre polynomial basis"
     )
+    scatter!(λ_ulam, label="Ulam eigs", marker=:xcross)
     scatter!(p3, λ_dmd, label="EDMD eigs", marker=:cross)
     plot!(p3, cospi.(0:0.01:2), sinpi.(0:0.01:2), style=:dash, label="|z| = 1")
 end
-gif(anim, fps=0.5)
+gif(anim, fps=0.25)
+
+
+
+
+
+using Optimization, OptimizationOptimJL, NLopt
+
+P = sparse(F♯)
+n = size(P, 1)
+V = volume(first(S))
+
+objective(x, z) = norm((P - z*I)x, 1)
+constraint(res, x, z) = res .= [norm(x, 1) - 1]
+
+x0 = rand(0.1:0.1:1, n) .* rand(-1:2:1, n)
+x0 /= norm(x0, 1)
+
+function residual(z, x0=x0)
+
+    obj = OptimizationFunction(
+        objective, 
+        Optimization.AutoForwardDiff(), 
+        cons=constraint
+    )
+    
+    prob = OptimizationProblem(
+        obj, x0, z, 
+        lcons=[-eps()], ucons=[eps()]#, lb=-ones(n), ub=ones(n)
+    )
+    
+    sol = solve(prob, IPNewton())
+
+    return sol.objective * V
+end
+
+xs = -1.1:0.1:1.2
+ys = -1.1:0.1:1.1
+
+res = @showprogress broadcast(xs', ys) do x, y
+    z = x + y * im
+    @exitsafe residual(z)
+end
+
