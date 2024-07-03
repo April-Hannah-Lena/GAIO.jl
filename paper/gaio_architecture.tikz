@@ -1,14 +1,14 @@
 \begin{tikzpicture}[auto, node distance=2cm,>=latex']
-    \node at (0,0) [block] (BLAS) {BLAS, LAPACK, ARPACK, lp\_solve, LEDA, BIAS, Profil};
+    \node at (0,0) [block] (BLAS) {BLAS, LAPACK, ARPACK, $\ldots$};
     \node at (0,-1.5) [block,fill=green!20] (gaio) {GAIO core (C)};
     \node at (-1.5,-3) [block] (python) {Python};
     \node at (-5,-3) [block] (numpy) {Numerical Python};
     \node at (1.5,-3) [block] (matlab) {Matlab};
-    \node at (-1.5,-5) [block] (grape) {GRAPE};
+    \node at (3.5,-1.5) [block] (grape) {GRAPE};
 
     \draw [thick, ->] (BLAS.south) -- (gaio.north);
     \draw [thick, ->] (gaio.south) -- (python.north);
     \draw [thick, ->] (gaio.south) -- (matlab.north);
-    \draw [thick, ->] (python.south) -- node[right] {\faFile}  (grape.north);
+    \draw [thick, ->] (gaio.east) -- node[right] {\faFile}  (grape.west);
     \draw [thick, ->] (numpy.east) -- (python.west);               
 \end{tikzpicture}

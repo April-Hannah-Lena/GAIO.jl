@@ -1,15 +1,15 @@
-title: "Fast, Elegant, Set-oriented Numerical Analysis using GAIO.jl"
+title: "GAIO.jl - a concise package for the global analysis of dynamical systems"
 keywords:
-  - Dynamical Systems
+  - dynamical system, invariant set, chain recurrent set, invariant manifold, attractor, invariant measure, almost invariant set, metastable set, coherent set, transfer operator, Koopman operator
 authors:
-  - name: A. Herwig
+  - name: April Herwig
     orcid: 0009-0001-0904-4806
     affiliation: 1
-  - name: O. Junge
+  - name: Oliver Junge
     orcid: 0000-0002-3435-307X
     affiliation: 1
 affiliations:
-  - name: Technical University Munich
+  - name: Technical University of Munich
     index: 1
 date: 9 March 2024
 bibliography: ref.bib

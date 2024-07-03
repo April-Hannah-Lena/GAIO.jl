@@ -18,15 +18,17 @@ A = maximal_backward_invariant_set(F, S, steps=21)
 
 using CairoMakie
 begin
-    fig = Figure(backgroundcolor=:transparent);
-    ax1 = Axis3(fig[1,1], aspect=(1,1,1), azimuth=5π/4, elevation=π/8, backgroundcolor=:transparent);
-    ax2 = Axis3(fig[1,2], aspect=(1,1,1), azimuth=π/16, elevation=π/16, backgroundcolor=:transparent);
-    ax3 = Axis3(fig[2,1], aspect=(1,1,1), azimuth=7π/4, elevation=3π/8, backgroundcolor=:transparent);
-    ax4 = Axis3(fig[2,2], aspect=(1,1,1), azimuth=7π/16, elevation=π/16, backgroundcolor=:transparent);
-    ms1 = plot!(ax1, A, color=(:red, 0.4));
-    ms2 = plot!(ax2, A, color=(:red, 0.4));
-    ms3 = plot!(ax3, A, color=(:red, 0.4));
-    ms4 = plot!(ax4, A, color=(:red, 0.4));
+    fig = Figure(backgroundcolor=:transparent, size=(800,300));
+    axiskwargs = (aspect=(1,1,1), protrusions=30, xlabeloffset=30, ylabeloffset=30, zlabeloffset=30, backgroundcolor=:transparent)
+    ax1 = Axis3(fig[1,1], azimuth=5π/4, elevation=π/8, axiskwargs...);
+    ax2 = Axis3(fig[1,2], azimuth=π/16, elevation=π/16, axiskwargs...);
+    ax3 = Axis3(fig[1,3]#=[2,1]=#, azimuth=7π/4, elevation=3π/8, axiskwargs...);
+    #ax4 = Axis3(fig[2,2], aspect=(1,1,1), azimuth=7π/16, elevation=π/16, backgroundcolor=:transparent);
+    mskwargs = (color=(:red, 0.4),)
+    ms1 = plot!(ax1, A, mskwargs...);
+    ms2 = plot!(ax2, A, mskwargs...);
+    ms3 = plot!(ax3, A, mskwargs...);
+    #ms4 = plot!(ax4, A, color=(:red, 0.4));
 end
 save("attractor.png", fig, px_per_unit=4)
 
@@ -39,11 +41,13 @@ colors = [-1000; indices[1:end-1];]
 centers = [c2 for (c2,r2) in A]
 
 begin
-    fig = Figure(backgroundcolor=:transparent);
-    ax1 = Axis3(fig[1,1], limits=(-5,5,-5,5,-5,5), aspect=(1,1,1), azimuth=5π/4, elevation=π/8, backgroundcolor=:transparent)
-    ax2 = Axis3(fig[1,2], limits=(-5,5,-5,5,-5,5), aspect=(1,1,1), azimuth=π/16, elevation=π/16, backgroundcolor=:transparent)
-    ax3 = Axis3(fig[2,1], limits=(-5,5,-5,5,-5,5), aspect=(1,1,1), azimuth=7π/4, elevation=3π/8, backgroundcolor=:transparent)
-    ax4 = Axis3(fig[2,2], limits=(-5,5,-5,5,-5,5), aspect=(1,1,1), azimuth=7π/16, elevation=π/16, backgroundcolor=:transparent)
+    fig = Figure(backgroundcolor=:transparent, size=(800,300));
+    axiskwargs = (limits=(-3,3,-3,3,-3,3), aspect=(1,1,1), protrusions=30, xlabeloffset=30, ylabeloffset=30, zlabeloffset=30, backgroundcolor=:transparent)
+    ax1 = Axis3(fig[1,1], azimuth=5π/4, elevation=π/8, axiskwargs...)
+    ax2 = Axis3(fig[1,2], azimuth=π/16, elevation=π/16, axiskwargs...)
+    ax3 = Axis3(fig[1,3]#=[2,1]=#, azimuth=7π/4, elevation=3π/8, axiskwargs...)
+    #ax4 = Axis3(fig[2,2], limits=(-3,3,-3,3,-3,3), aspect=(1,1,1), azimuth=7π/16, elevation=π/16, backgroundcolor=:transparent, protrusions=10)
+    mskwargs = (color=colors, colormap=(:blues, 0.3))
     for (c2,r2) in A2
         x = SVector{3,Float32}[c2]
         for _ in 2:2400
@@ -51,10 +55,10 @@ begin
         end
         
         x = x[indices]
-        ms5 = lines!(ax1, x, color=colors, colormap=(:blues, 0.3))
-        ms6 = lines!(ax2, x, color=colors, colormap=(:blues, 0.3))
-        ms7 = lines!(ax3, x, color=colors, colormap=(:blues, 0.3))
-        ms8 = lines!(ax4, x, color=colors, colormap=(:blues, 0.3))
+        ms5 = lines!(ax1, x, mskwargs...)
+        ms6 = lines!(ax2, x, mskwargs...)
+        ms7 = lines!(ax3, x, mskwargs...)
+        #ms8 = lines!(ax4, x, color=colors, colormap=(:blues, 0.3))
     end
     #ms1 = plot!(ax1, A, color=(:red, 0.01))
     #ms2 = plot!(ax2, A, color=(:red, 0.01))
@@ -72,16 +76,18 @@ T = TransferOperator(F, W, W)
 μ = log10 ∘ abs ∘ ev[1]
 
 begin
-    fig = Figure(backgroundcolor=:transparent);
-    ax1 = Axis3(fig[1,1], aspect=(1,1,1), azimuth=5π/4, elevation=π/8, backgroundcolor=:transparent);
-    ax2 = Axis3(fig[1,2], aspect=(1,1,1), azimuth=π/16, elevation=π/16, backgroundcolor=:transparent);
-    ax3 = Axis3(fig[2,1], aspect=(1,1,1), azimuth=7π/4, elevation=3π/8, backgroundcolor=:transparent);
-    ax4 = Axis3(fig[2,2], aspect=(1,1,1), azimuth=7π/16, elevation=π/16, backgroundcolor=:transparent);
-    ms1 = plot!(ax1, μ, colormap=(:jet, 0.4))
-    ms2 = plot!(ax2, μ, colormap=(:jet, 0.4))
-    ms3 = plot!(ax3, μ, colormap=(:jet, 0.4))
-    ms4 = plot!(ax4, μ, colormap=(:jet, 0.4))
-    Colorbar(fig[1:2,3], ms1, ticks=([-5,-10,-15,-20], [L"10^{-5}", L"10^{-10}", L"10^{-15}", L"10^{-20}"]))
+    fig = Figure(backgroundcolor=:transparent, size=(825,300));
+    axiskwargs = (aspect=(1,1,1), protrusions=30, xlabeloffset=30, ylabeloffset=30, zlabeloffset=30, backgroundcolor=:transparent)
+    ax1 = Axis3(fig[1,1], azimuth=5π/4, elevation=π/8, axiskwargs...);
+    ax2 = Axis3(fig[1,2], azimuth=π/16, elevation=π/16, axiskwargs...);
+    ax3 = Axis3(fig[1,3]#=[2,1]=#, azimuth=7π/4, elevation=3π/8, axiskwargs...);
+    #ax4 = Axis3(fig[2,2], aspect=(1,1,1), azimuth=7π/16, elevation=π/16, backgroundcolor=:transparent);
+    mskwargs = (colormap=(:jet, 0.4),)
+    ms1 = plot!(ax1, μ, mskwargs...)
+    ms2 = plot!(ax2, μ, mskwargs...)
+    ms3 = plot!(ax3, μ, mskwargs...)
+    #ms4 = plot!(ax4, μ, colormap=(:jet, 0.4))
+    Colorbar(fig[1,4]#=[1:2,3]=#, ms1, ticks=([-5,-10,-15,-20], [L"10^{-5}", L"10^{-10}", L"10^{-15}", L"10^{-20}"]))
 end
 save("inv_measure.png", fig, px_per_unit=4)
 
@@ -96,32 +102,35 @@ scale = symlog(1e-25)
 plot(μ, colormap=(:jet, 0.4))
 
 begin
-    fig = Figure(backgroundcolor=:transparent);
-    ax1 = Axis3(fig[1,1], aspect=(1,1,1), azimuth=5π/4, elevation=π/8, backgroundcolor=:transparent);
-    ax2 = Axis3(fig[1,2], aspect=(1,1,1), azimuth=π/16, elevation=π/16, backgroundcolor=:transparent);
-    ax3 = Axis3(fig[2,1], aspect=(1,1,1), azimuth=7π/4, elevation=3π/8, backgroundcolor=:transparent);
-    ax4 = Axis3(fig[2,2], aspect=(1,1,1), azimuth=7π/16, elevation=π/16, backgroundcolor=:transparent);
-    ms1 = plot!(ax1, μ, colormap=(:buda, 0.4))
-    ms2 = plot!(ax2, μ, colormap=(:buda, 0.4))
-    ms3 = plot!(ax3, μ, colormap=(:buda, 0.4))
-    ms4 = plot!(ax4, μ, colormap=(:buda, 0.4))
-    Colorbar(fig[1:2,3], ms1, ticks=([-16,-6,0,6,16], [L"-10^{-10}", L"-10^{-20}", L"0", L"10^{-20}", L"10^{-10}"]))
+    fig = Figure(backgroundcolor=:transparent, size=(825,300));
+    axiskwargs = (aspect=(1,1,1), protrusions=30, xlabeloffset=30, ylabeloffset=30, zlabeloffset=30, backgroundcolor=:transparent)
+    ax1 = Axis3(fig[1,1], azimuth=5π/4, elevation=π/8, axiskwargs...);
+    ax2 = Axis3(fig[1,2], azimuth=π/16, elevation=π/16, axiskwargs...);
+    ax3 = Axis3(fig[1,3]#=[2,1]=#, azimuth=7π/4, elevation=3π/8, axiskwargs...);
+    #ax4 = Axis3(fig[2,2], aspect=(1,1,1), azimuth=7π/16, elevation=π/16, backgroundcolor=:transparent);
+    mskwargs = (colormap=(:buda, 0.4),)
+    ms1 = plot!(ax1, μ, mskwargs...)
+    ms2 = plot!(ax2, μ, mskwargs...)
+    ms3 = plot!(ax3, μ, mskwargs...)
+    #ms4 = plot!(ax4, μ, colormap=(:buda, 0.4))
+    Colorbar(fig[1,4]#=[1:2,3]=#, ms1, ticks=([-16,-6,0,6,16], [L"-10^{-10}", L"-10^{-20}", L"0", L"10^{-20}", L"10^{-10}"]))
 end
 save("almost_inv.png", fig, px_per_unit=4)
 
-tol, maxiter = eps()^0.25, 1000
-λ, ev, nconv = eigs(T; which=:LM, nev=800, tol=tol, maxiter=maxiter)
-scatter(λ)
+#tol, maxiter = eps()^0.25, 1000
+#λ, ev, nconv = eigs(T; which=:LM, nev=800, tol=tol, maxiter=maxiter)
+#scatter(λ)
 
-λ2, ev2, nconv = eigs(T; which=:SR, nev=300, tol=tol, maxiter=maxiter)
-scatter(λ2)
+#λ2, ev2, nconv = eigs(T; which=:SR, nev=300, tol=tol, maxiter=maxiter)
+#scatter(λ2)
 
 #serialize("lambda.ser", [λ; λ2])
 λ = deserialize("./paper/lambda.ser")
 begin
     fig = Figure(backgroundcolor=:transparent);
-    ax = Axis(fig[1,1], xlabel="Re", ylabel="Im", backgroundcolor=:transparent)
+    ax = Axis(fig[1,1], xlabel="Re", ylabel="Im", aspect=1., backgroundcolor=:transparent)
     ms = scatter!(ax, λ)
+    ms2 = arc!(ax, SA_F64[0,0], 1., -π, π, linestyle=:dash, color=:black)
 end
 save("spectrum.pdf", fig, pt_per_unit=4)
 
