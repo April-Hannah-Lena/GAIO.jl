@@ -7,6 +7,7 @@
 \usepackage{lmodern}
 \usepackage{fontawesome}
 \usepackage{xcolor}
+\definecolor{gray10}{gray}{0.95}
 \usepackage{enumitem}
 
 \usepackage{tikz}
@@ -59,21 +60,19 @@
 
 \begin{abstract}
 
-We provide an implementation of set-oriented numerical methods \cite{DeJu:02,DeFrJu:01} for the global analysis of dynamical systems in a Julia package. The package enables the computation of invariant sets (e.g. chain recurrent sets, attractors and invariant manifolds) and provides discretizations of the Frobenius-Perron and the Koopman operator, enabling the computation of, e.g., invariant measures, almost invariant, cyclic and coherent sets. The original implementation of GAIO (``Global Analysis of Invariant Objects'') was written in C with an interface to Matlab \cite{GAIO}. The redesign in Julia presented in this note has a more concise syntax, while showing the same or even better performance than the original version.
+We provide an implementation of set-oriented numerical methods \cite{DeJu:02,DeFrJu:01} in a Julia package. In the context of dynamical systems, the package enables the rigorous computation of invariant sets (e.g. chain recurrent sets, attractors and invariant manifolds) and provides discretizations of the transfer and the Koopman operator, enabling the computation of, e.g., invariant measures, almost invariant, cyclic and coherent sets. The redesign of the original implementation \cite{GAIO} in Julia presented in this note has a more concise syntax, while showing the same or even better performance.
 
 \end{abstract}
 
-\todo{Warum bleibt eigentlich unten auf den Seiten so viel Platz?}
-
 \section{Introduction}
 
-A \emph{dynamical system} is a mathematical model of a system whose state evolves with time.  Key questions about the possible evolutions in a system  include whether certain subsets of state space are invariant, the stability of these subsets as well as questions about statistical properties of typical trajectories. Such topological and statistical questions (among others) can be answered using a \emph{set-oriented} approach \cite{DeJu:02,DeFrJu:01}, see also, e.g., \cite{Hsu:13,Mi:02}. 
+This note presents an implementation of a \emph{set-oriented} approach  to numerical computations approach \cite{DeJu:02,DeFrJu:01} in the Julia language, encapsulated in the package GAIO.jl. The data structures and the algorithmic interface have been completely redesigned over the original implementation in C \cite{GAIO}. As a result, the code for the set-oriented algorithms is very concise and close to its mathematical pseudocode. At the same time, the performance is equal or better. We showcase the features of GAIO.jl by some classical computations of invariant sets and (almost) invariant measures in dynamical systems.  
 
-This paper presents an implementation of this approach in the Julia language, encapsulated in the package GAIO.jl. The data structures and the algorithmic interface have been completely redesigned such that the code for the algorithms is very concise and close to their mathematical pseudocode. At the same time, the performance is equal or better than that of the original C and Matlab versions \cite{GAIO}.   
+A \emph{dynamical system} is a mathematical model of a system whose state evolves with time.  Key questions about the possible evolutions in a system  include whether certain subsets of state space are invariant, the stability of these subsets as well as questions about statistical properties of typical trajectories. Such topological and statistical questions (among others) can be answered using set-oriented numerical techniques \cite{DeJu:02,DeFrJu:01}, see also \cite{Hsu:13,Mi:02}. 
 
 We give a brief introduction on what can be computed with GAIO.jl in Section~\ref{sec:computations} and then talk about the architecture of the package in Section~\ref{sec:architecture}.
 
-\eject
+%\eject
 
 \section{Global Analysis of Dynamical Systems}
 \label{sec:computations}
@@ -82,7 +81,7 @@ A dynamical system in which time is modelled in discrete steps is given by a map
 
 \subsection{Geometric/topological analysis}\label{sec:attractors}
 
-A set $Y \subset X$ is \emph{forward invariant} if $f(Y) \subset Y$, \emph{backward invariant} if $f^{-1}(Y) \subset Y$ \footnote{$f^{-1}(Y)$ denotes the preimage}, and \emph{invariant} if it is both forward and backward invariant. An invariant set is called \emph{attracting} if there exists a neighborhood $U \supset Y$ such that for any other neighborhood $V \supset Y$ there exists a $k_0 \in \N$ such that $f^k (U) \subset V$ for all $k\geq k_0$. 
+A set $Y \subset X$ is \emph{forward invariant} if $f(Y) \subset Y$, \emph{backward invariant} if $f^{-1}(Y) \subset Y$ \footnote{$f^{-1}(Y)$ denotes the preimage of the set $Y$}, and \emph{invariant} if it is both forward and backward invariant. An invariant set is called \emph{attracting} if there exists a neighborhood $U \supset Y$ such that for any other neighborhood $V \supset Y$ there exists a $k_0 \in \N$ such that $f^k (U) \subset V$ for all $k\geq k_0$. 
 
 The \emph{maximal invariant set} contained in $Y$ is the set 
     \begin{equation}
@@ -96,18 +95,18 @@ It follows immediately from the definition that $\Inv (Y)$ contains all other in
     If $Y \subset X$ is forward invariant, then $\Inv (Y) = \bigcap_{k \geq 0} f^k (Y)$. 
 \end{proposition}
 
-If $Y$ is not forward invariant, the set $A_Y=\bigcap_{k \geq 0} f^k (A)$ is called the \emph{attractor relative to $Y$} \cite{DeHo:97}. The proposition leads to a natural ansatz for approximation by repeatedly tightening a cover of the set by finite collections of sets \cite{DeHo:97}. Specifically, given a partition $\cP$ of $X$ into (essentially) disjoint sets and a covering $\cB$ of $A_Y$ by elements of $\cP$:
+If $Y$ is not forward invariant, the set $A_Y=\bigcap_{k \geq 0} f^k (A)$ is called the \emph{attractor relative to $Y$} \cite{DeHo:97}. The proposition leads to a natural ansatz for approximation by repeatedly tightening a cover of the set by finite collections of sets \cite{DeHo:97}. Specifically, given a partition $\cP$ of $X$ into (essentially) disjoint sets and a covering $\cB$ of $A_Y$ by elements of $\cP$, repeat the following two steps until a prescribed diameter of the partition elements is reached:
 
 \begin{enumerate}
     \item Refine $\cP$ into a strictly finer partition $\cP'$ such that $\diam (\cP') \leq \theta \cdot \diam (\cP)$ for some fixed $\theta < 1$. Let $\cB'$ be the (refined) covering $\cB$. 
     \item Map the covering forward under $f$, i.e. cover\footnote{$\vert \cB \vert = \bigcup_{B \in \cB} B$} $f(\vert\cB'\vert)$  by elements of $\cP$. Intersect this covering with $\cB'$. 
 \end{enumerate}
 
-A simple way to partition a cubical domain $$X = \left[ \ell_1, u_1 \right] \times \ldots \times \left[ \ell_d, u_d \right]$$ (a \emph{box}) is to divide it into an $n_1 \times \ldots \times n_d$ - element grid of boxes. 
+A simple way to partition a \emph{box} $$X = \left[ \ell_1, u_1 \right] \times \ldots \times \left[ \ell_d, u_d \right]$$  is to divide it into an $n_1 \times \ldots \times n_d$ - element grid of boxes. 
 
 \subsubsection*{Example: A four wing attractor}
 
-Consider the system \cite{3dattractor}
+Consider the ordinary differential equation \cite{3dattractor}
 \begin{equation}
     \label{eq:ode}
     \begin{split}
@@ -116,36 +115,45 @@ Consider the system \cite{3dattractor}
         &\dot{z} = -z - xy 
     \end{split}
 \end{equation}
-where $a,b,d \in \R$ are parameters. Let $f$ be the time-$2$ flow map of the system, discretized using 20 steps of the standard Runge-Kutta $4$th order method. We approximate the solution for the initial value $x_0=?$ \todo{?} by the following code in GAIO.jl
-\todo{Es scheint etwas mit der Färbung in den Codes nicht zu stimmen.}
-\begin{lstlisting}[language=Julia,label=lst:map,backgroundcolor=\color{white}]
-const a, b, d = 0.2, -0.01, -0.4
+where $a,b,d \in \R$ are parameters. Let $f$ be the time-$2$ flow map of the system, discretized using 20 steps of the standard Runge-Kutta $4$th order method:
+\begin{lstlisting}[language=Julia,label=lst:map,backgroundcolor=\color{gray10},mathescape]
+const a, b, d = 0$\texttt{.2}$, -0$\texttt{.0}$1, -0$\texttt{.4}$
 v((x,y,z)) = @. (a*x+y*z, d*y+b*x-z*y, -z-x*y)
-f(x) = rk4_flow_map(v, x, 0.01, 20)
+f(x) = rk4_flow_map(v, x, 0$\texttt{.0}$1, 20)
 \end{lstlisting}
-Figure~\ref{fig:trajectories} shows the resulting trajectory.  Of course, any other package for solving initial value problems (e.g.\ from DifferentialEquations.jl or DynamicalSystems.jl) can be used in order to approximate the flow map. Note, however, that we will need to evaluate $f$ on a lot of points and so efficiency of the solver matters.
+\begin{lstlisting}[language=Julia,backgroundcolor=\color{gray10},mathescape]
+# illustrative initial condition
+x0 = (0$\texttt{.9}$4, -2$\texttt{.2}$, 0$\texttt{.4}$)
+trajectory = [x0]
+for _ in 1:100_000
+    x = trajectory[end]
+    push!(trajectory, f(x))
+end
+lines(trajectory)
+\end{lstlisting}
+Figure~\ref{fig:trajectories} shows the resulting trajectory.  Of course, any other package for solving initial value problems (e.g.\ from DifferentialEquations.jl or DynamicalSystems.jl) can be used in order to approximate the flow map. Note, however, that we will need to evaluate $f$ on many initial conditions so efficiency of the solver matters.
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.45\textwidth]{trajectories.jpg}
-    \caption{A trajectory of the four wing system. \todo{make bounding box smaller}}
+    \includegraphics[width=0.45\textwidth]{trajectories.png}
+    \caption{A trajectory of the four wing system.}
     \label{fig:trajectories}
 \end{figure}
 
-We partition the domain $X = \left[ -5, 5 \right]^3$ into a $2 \times 2 \times 2$ grid of boxes: 
-\begin{lstlisting}[label=lst:box,backgroundcolor=\color{white}]
+We now compute a covering of the attractor of the system.  To this end, we first construct a partition $\cP$ of the domain $X = \left[ -5, 5 \right]^3$ into a $2 \times 2 \times 2$ grid of boxes: 
+\begin{lstlisting}[label=lst:box,backgroundcolor=\color{gray10}]
 center = (0., 0., 0.)
 radius = (5., 5., 5.)
 X = Box(center, radius)
 P = BoxPartition(X, (2, 2, 2))
 \end{lstlisting}
 
-The map $f:X\to X$ induces a map\footnote{For some set $S$, $2^S$ denotes the power set of $S$.} $F : 2^\cP \to 2^\cP$ by the relationship 
+The flow map $f$ induces a map\footnote{For some set $S$, $2^S$ denotes the power set of $S$.} $F : 2^\cP \to 2^\cP$ by the relationship 
 \begin{equation}
     F \left( \left\{ B \right\} \right) = 
     %\bigcup_{\substack{
-    %    R \in \cP \\ R \cap f(B) \neq \emptyset
-    %}} \left\{ R \right\}
-    \left\{ R \in \cP \mid R \cap f(B) \neq \emptyset \right\}
+    %    C \in \cP \\ C \cap f(B) \neq \emptyset
+    %}} \left\{ C\right\}
+    \left\{ C \in \cP \mid C \cap f(B) \neq \emptyset \right\}
 \end{equation}
 %
 as sketched in Fig. \ref{fig:boxcover}. 
@@ -158,13 +166,13 @@ as sketched in Fig. \ref{fig:boxcover}.
 \end{figure}
 %
 GAIO.jl provides multiple methods for approximating the map $F$. An intuitive method is to sample some points  uniformly within a box, and then map each point with $f$:  
-\begin{lstlisting}[backgroundcolor=\color{white}]
+\begin{lstlisting}[backgroundcolor=\color{gray10}]
 F = BoxMap(:montecarlo, f, Q)
 \end{lstlisting}
 If a rigorous (outer) cover of the image $F(\{B\})$ is required, special sampling techniques \cite{rigoroussampling} and/or interval arithmetic can be used.
 We can now implement the above algorithm as shown in Figure~\ref{fig:attr_julia}.  In each iteration we cycle through the coordinate direction in which we bisect the boxes of the current covering.
 \begin{figure}[h]
-\begin{lstlisting}[label=lst:relative_attractor,mathescape,frame=single]
+\begin{lstlisting}[language=Julia,backgroundcolor=\color{gray10},mathescape]
 function relative_attractor(F, B; steps)
     for k in 1:steps
         B = subdivide(B, k % 3 + 1)
@@ -178,7 +186,7 @@ end
 \end{figure}
 
 In order to invoke this function, we first construct the initial covering by collecting all boxes from the partition:
-\begin{lstlisting}[language=Julia,mathescape,backgroundcolor=\color{white}]
+\begin{lstlisting}[language=Julia,mathescape,backgroundcolor=\color{gray10}]
 B = cover(P, :)
 A = relative_attractor(F, B, steps=21)
 plot(A)
@@ -188,7 +196,7 @@ The computed covering of the attractor relative to $X$ is shown in Fig. \ref{fig
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.45\textwidth]{attractor.jpg}
+    \includegraphics[width=0.45\textwidth]{attractor.png}
     \caption{Computed relative attractor of the system described in Eq. \ref{eq:ode}}
     \label{fig:attractor}
 \end{figure}
@@ -234,32 +242,33 @@ The matrix $F_\sharp\in\R^{n\times n}$ defines a Markov chain on $\cP$ and is ou
 %\end{equation}
 
 As an example, we compute $F_\sharp$ on the covering of the attractor constructed  above and then use the \texttt{eigs} function from Arpack.jl in order to compute part of the spectrum of $F_\sharp$. 
-\begin{lstlisting}[language=Julia,mathescape,backgroundcolor=\color{white}]
-    F$_\sharp$ = TransferOperator(F, A, A)
-    $\lambda$, ev, n_converged =  eigs(F$_\sharp$)
+\begin{lstlisting}[language=Julia,mathescape,backgroundcolor=\color{gray10}]
+F$_\sharp$ = TransferOperator(F, A, A)
+$\lambda$, ev, n_converged =  eigs(F$_\sharp$)
+scatter($\lambda$)
 \end{lstlisting}
-\todo{code for plotting}
+
 In Fig.~\ref{fig:spectrum}, the spectrum of $F_\sharp$ is shown. 
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.4\textwidth]{spectrum.pdf}
-    \caption{Spectrum $F_\sharp$. \todo{show unit circle, axis square}}
+    \caption{Spectrum $F_\sharp$.}
     \label{fig:spectrum}
 \end{figure}
 
 The eigenvalue $1$ is simple, the corresponding approximate invariant measure is shown in Fig.~\ref{fig:invariantmeasure}.  
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.45\textwidth]{inv_measure.jpg}
-    \caption{Natural invariant measure of $f$. Compare with Fig. \ref{fig:trajectories}: the "centers" of the wings are visited frequently, correspondingly they have more $\mu$-mass. The "outer spirals" are visited infrequently, they have less $\mu$-mass. \todo{put colorbar back in}}
+    \includegraphics[width=0.45\textwidth]{inv_measure.png}
+    \caption{Natural invariant measure of $f$. Compare with Fig. \ref{fig:trajectories}: the "centers" of the wings are visited frequently, correspondingly they have more $\mu$-mass. The "outer spirals" are visited infrequently, they have less $\mu$-mass.}
     \label{fig:invariantmeasure}
 \end{figure}
 
 In Fig.~\ref{fig:almostinvariant}, we plot the eigenmeasure at the second largest real eigenvalue $\lambda\approx 0.978$. By its sign structure, this measure decomposes the attractor into two almost invariant sets \cite{DeJu:99}, i.e.\ two sets $A_-,A_+$ for which the invariance ratio $$m(A\cap f^{-1} (A))/m(A)$$ is close to $1$.
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.45\textwidth]{almost_inv.jpg}
-    \caption{Eigenmeasure corresponding to the second-largest eigenvalue $0.978$. The sign structure of the measure decomposes the attractor into two almost invariant sets. \todo{put colorbar back in}}
+    \includegraphics[width=0.45\textwidth]{almost_inv.png}
+    \caption{Eigenmeasure corresponding to the second-largest eigenvalue $0.978$. The sign structure of the measure decomposes the attractor into two almost invariant sets.}
     \label{fig:almostinvariant}
 \end{figure}
 
@@ -313,7 +322,7 @@ function relative_attractor(tree, f, steps)
 \label{fig:attr_matlab}
 \end{figure}
 
-In contrast, in GAIO.jl, details on how box collections are stored and how the box map $F:2^\cP\to 2 ^\cP$ is realized are essentially completely hidden from the user. After defining $F$ as a \texttt{BoxMap}, it can simply be applied to a \texttt{BoxSet}, resulting in another \texttt{BoxSet}. Since a \texttt{BoxSet} is a realization \todo{?} of an \texttt{AbstractSet}, all set operations can be applied. As a result, the implementation of set-oriented algorithms -- like the algorithm for computing relative attractors in Fig.~\ref{fig:attr_julia} -- is very close to its mathematical formulation.
+In contrast, in GAIO.jl, details on how box collections are stored and how the box map $F:2^\cP\to 2 ^\cP$ is realized are essentially completely hidden from the user. After defining $F$ as a \texttt{BoxMap}, it can simply be applied to a \texttt{BoxSet}, resulting in another \texttt{BoxSet}. Since \texttt{BoxSet} is a subtype of \texttt{AbstractSet}, all set operations can be applied. As a result, the implementation of set-oriented algorithms -- like the algorithm for computing relative attractors in Fig.~\ref{fig:attr_julia} -- is very close to its mathematical formulation.
 
     
 %    \item \emph{No longer needing to tradeoff simplicity and transparency.} The speed of a modern compiled language on today's hardware comes with an added benefit: code does not \emph{need} to be hyper-optimized - "mostly" optimized is good enough. GAIO originally used a tree data structure to represent partitions of phase space in such a way that each box was represented by a precise bitstring, maximally utilizing every byte of memory. While this was efficient, it made the data difficult to decipher. More generally, a decision always had to be made. Either
@@ -342,7 +351,7 @@ Furthermore, the open-source nature of Julia's ecosystem has helped in programmi
 The Julia package GAIO.jl is introduced via an example of a three dimensional dynamical system. The software has been redesigned and rebuilt from the ground up to balance high performance and elegance, no longer needing to rely on two languages to do so. Future work is planned to use these structures e.g. for homology computation in cubical complexes, as well as to even more tightly integrate into the existing scientific computing ecosystem.
 % e.g. DynamicalSystems.jl \cite{dynamicalsystemsjl,dynamicalsystemsbook} in the Julia programming language. 
 
-\todo{fix references}
+\todo{fix references <- was muss geändert werden?}
 
 \input{bib.tex}
 

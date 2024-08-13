@@ -2,6 +2,8 @@ title: "GAIO.jl - a concise package for the global analysis of dynamical systems
 keywords:
   - dynamical system, invariant set, chain recurrent set, invariant manifold, attractor, invariant measure, almost invariant set, metastable set, coherent set, transfer operator, Koopman operator
 authors:
+  - name: Michael Dellnitz
+    affiliation: 2
   - name: April Herwig
     orcid: 0009-0001-0904-4806
     affiliation: 1
@@ -9,7 +11,9 @@ authors:
     orcid: 0000-0002-3435-307X
     affiliation: 1
 affiliations:
-  - name: Technical University of Munich
+  - name: Technical University of Munich, Germany
     index: 1
+  - name: University of Paderborn, Germany
+    index: 2
 date: 9 March 2024
 bibliography: ref.bib

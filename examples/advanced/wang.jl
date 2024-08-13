@@ -1,3 +1,7 @@
+pwd()
+cd("./paper")
+pwd()
+
 using GAIO, StaticArrays, LaTeXStrings, Serialization
 
 const a, b, c, d, e, g, h = 0.2, -0.01, 1.0, -0.4, -1.0, -1.0, -1.0
@@ -30,7 +34,7 @@ begin
     ms3 = plot!(ax3, A; mskwargs...);
     #ms4 = plot!(ax4, A, color=(:red, 0.4));
 end
-save("attractor.png", fig, px_per_unit=4)
+save("attractor.png", fig, resolution=(800,300), px_per_unit=4)
 
 P2 = BoxPartition(dom, (16,16,16))
 A2 = cover(P2, A)
@@ -48,7 +52,7 @@ x = x[indices]
 
 begin
     fig = Figure(backgroundcolor=:transparent, size=(800,300));
-    axiskwargs = (limits=(-3,3,-3,3,-3,3), aspect=(1,1,1), protrusions=20, xlabeloffset=30, ylabeloffset=30, zlabeloffset=30, backgroundcolor=:transparent)
+    axiskwargs = (limits=(-3,3,-3,3,-3,3), aspect=(1,1,1), protrusions=25, xlabeloffset=30, ylabeloffset=30, zlabeloffset=30, backgroundcolor=:transparent)
     ax1 = Axis3(fig[1,1], azimuth=5π/4, elevation=π/8; axiskwargs...)
     ax2 = Axis3(fig[1,2], azimuth=π/16, elevation=π/16; axiskwargs...)
     ax3 = Axis3(fig[1,3]#=[2,1]=#, azimuth=7π/4, elevation=3π/8; axiskwargs...)
@@ -59,7 +63,7 @@ begin
     ms3 = lines!(ax3, x; mskwargs...)
     #ms4 = plot!(ax4, A, color=(:red, 0.01))
 end
-save("trajectories.png", fig, px_per_unit=4)
+save("trajectories.png", fig, resolution=(800,300), px_per_unit=4)
 
 P = BoxPartition(dom, (128,128,128))
 S = cover(P, cen)
@@ -83,7 +87,7 @@ begin
     #ms4 = plot!(ax4, μ, colormap=(:jet, 0.4))
     Colorbar(fig[1,4]#=[1:2,3]=#, ms1, ticks=([-5,-10,-15,-20], [L"10^{-5}", L"10^{-10}", L"10^{-15}", L"10^{-20}"]))
 end
-save("inv_measure.png", fig, px_per_unit=4)
+save("inv_measure.png", fig, resolution=(825,300), px_per_unit=4)
 
 
 import CairoMakie.Makie: Symlog10, ReversibleScale
@@ -109,7 +113,7 @@ begin
     #ms4 = plot!(ax4, μ, colormap=(:buda, 0.4))
     Colorbar(fig[1,4]#=[1:2,3]=#, ms1, ticks=([-16,-6,0,6,16], [L"-10^{-10}", L"-10^{-20}", L"0", L"10^{-20}", L"10^{-10}"]))
 end
-save("almost_inv.png", fig, px_per_unit=4)
+save("almost_inv.png", fig, resolution=(825,300), px_per_unit=4)
 
 #tol, maxiter = eps()^0.25, 1000
 #λ, ev, nconv = eigs(T; which=:LM, nev=800, tol=tol, maxiter=maxiter)
@@ -119,7 +123,7 @@ save("almost_inv.png", fig, px_per_unit=4)
 #scatter(λ2)
 
 #serialize("lambda.ser", [λ; λ2])
-λ = deserialize("./paper/lambda.ser")
+λ = deserialize("./lambda.ser")
 begin
     fig = Figure(backgroundcolor=:transparent);
     ax = Axis(fig[1,1], xlabel="Re", ylabel="Im", aspect=1., backgroundcolor=:transparent)
