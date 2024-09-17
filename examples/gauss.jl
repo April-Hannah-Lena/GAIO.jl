@@ -1,6 +1,6 @@
 #using GAIO
 using SparseArrays, StaticArrays, LinearAlgebra, Arpack
-using LegendrePolynomials, FastGaussQuadrature
+using LegendrePolynomials, FastGaussQuadrature, DoubleFloats
 using ProgressMeter, Plots
 using ThreadsX
 using Base.Threads: nthreads, @threads
@@ -46,7 +46,7 @@ begin
 
     function inv_gauss(y::Real; α=2, β=-1-exp(-α))
         exp(-α) ≤ y - β ≤ 1  ||  throw(DomainError(y))
-        -sqrt( -log(y-β)/α )
+        -sqrt( -log(y-β)/α )>
     end
 
     inv_gauss((x,); α=2, β=-1-exp(-α)) = (inv_gauss(x; α=α, β=β),)
@@ -103,9 +103,7 @@ begin
         x = _x + 1
         p = ( 1/4 ≤ x < 3/4 )  ?  2 : -4
         1 + p/10
-    end
-
-    jac_linear_gauss((x,)) = (jac_linear_gauss(x),)
+    end>c_linear_gauss(x),)
 
     ∘ⁿ(f, n) = f ∘ ( n == 1 ? identity : ∘ⁿ(f, n-1) )
 
@@ -174,10 +172,22 @@ end
 
 begin
 
-    leg(x::AbstractFloat, R=256) = collectPl(x; norm=Val(:normalized), lmax = R-1)
-    leg(::Val{R}) where R = x -> leg(x, R)
+nodes, weights = gausslegendre(1024)
+nodes = Double64.(nodes)
+weights = Double64.(weights)
+nodes = [-1:0.001:1;]
+weights = 2 .* ones(length(nodes)) ./ length(nodes)
 
-    nodes, weights = gausslegendre(4096)
+function res_dmd(
+        f = gauss,
+        nodes = nodes,
+        weights = weights,
+        basis = leg(Val(128)),#x -> [1/sqrt(2); cospi.(x .* (1:14)); sinpi.(x .* (1:14))],
+        xs = xs, 
+        ys = ys
+    )
+    
+    data = 2 .* f.( (nodes .- 1) ./ 2 ) .+ 1
 
     nodes = [-1:0.01:1;]
     weights = ones(length(nodes)) ./ length(nodes)
@@ -266,8 +276,26 @@ scatter!(λ_ulam, label="Ulam eigs", marker=:xcross)
 scatter!(λ_dmd, label="EDMD eigs", marker=:cross)
 plot!(cospi.(0:0.01:2), sinpi.(0:0.01:2), style=:dash, label="|z| = 1")=#
 
-#begin
-    p2 = contour(
+p2 = contour(
+    xs, ys, r_dmd, 
+    levels=levels, aspectratio=1., colormap=:rainbow, clabels=true,
+    size=(1200,900)
+)
+scatter!(λ_ulam[1:10], label="Ulam eigs", marker=:xcross)
+scatter!(λ_dmd, label="EDMD eigs", marker=:cross)
+scatter!(ComplexF64[((0.8*exp(2π*im/9)) .^ (1:10)); ((0.8*exp(-2π*im/9)) .^ (1:10))], marker=:xcross, label="True eigs")
+plot!(cospi.(0:0.01:2), sinpi.(0:0.01:2), style=:dash, label="|z| = 1")
+
+plot(p1, p2, size=(1200,600))
+
+savefig("../talk_GAIO.jl/pseudospectrum_comparison_gauss.png")
+
+
+anim = @animate for n_basis in [32, 64, 128, 256]
+    n_points = 4*n_basis
+    nodes, weights = gausslegendre(n_points)
+    r_dmd, λ_dmd = res_dmd(mob, nodes, weights, leg(Val(n_basis)))
+    p3 = contour(
         xs, ys, r_dmd, 
         levels=levels, aspectratio=1., colormap=:rainbow, clabels=true,
         title="M = $M, N = $N, r = $(round(r, digits=3)), R = $(round(R, digits=3))"
