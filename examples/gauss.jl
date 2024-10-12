@@ -1,6 +1,6 @@
 #using GAIO
 using SparseArrays, StaticArrays, LinearAlgebra, Arpack
-using LegendrePolynomials, FastGaussQuadrature, DoubleFloats
+using LegendrePolynomials, FastGaussQuadrature
 using ProgressMeter, Plots
 using ThreadsX
 using Base.Threads: nthreads, @threads
@@ -19,18 +19,21 @@ macro exitsafe(expr)
     end
 end
 
-const μ = 0.8 * exp(im*pi/8)
+const μ = 0.4 * exp(im*pi/4)
 const ρ = 0. + 0im
 const params = (μ, ρ)
 
 τ(z, p = params) = prod( @. (z - p)/(1 - conj(p) * z) )
 #τ(z, μ=, ρ=0.) = (z - μ)/(1 - μ' * z) * (z - ρ)/(1 - ρ' * z)
+T(θ, p = params) = ( (z -> angle(z)/π) ∘ (z -> τ(z,p)) ∘ (θ -> exp(π*im*θ)) )(θ)
 
 # for μ ∈ int(𝔻),  ρ = 0,  params = (μ, ρ)
 const λ_true = sort!( 
     vec( [(-μ) (-μ)'] .^ (0:50) ), 
     by=abs, rev=true 
 )
+
+
 
 #=
 begin
@@ -195,15 +198,19 @@ function res_dmd(
 end
 =#
 
-const M = 2_000_000
-const R = 11/10 - 1/32
-const r = 1/R
-const N = 30
+R = 11/10 - 1/32
+r = 1/R
 
-function main()
+M = 200_000
+N = 16
+
+function main(R=R, M=M, N=N)
+
+r = 1/R
 
 dθ = 1/M
 θs = dθ:dθ:1
+
 
 basis( z, n, d = sqrt(r^(2n) + R^(2n)) ) = z^n / d
 basis(n) = z -> basis(z, n)
@@ -212,23 +219,61 @@ G = zeros(ComplexF64, 2N+1, 2N+1)
 A = zeros(ComplexF64, 2N+1, 2N+1)
 L = zeros(ComplexF64, 2N+1, 2N+1)
 
+
 prog = Progress((2N+1)^2, desc="Computing matrices...")
 @threads for cartesian in CartesianIndices(G)
     i, j = cartesian.I
     ψi = basis( (-N:N)[i] )
     ψj = basis( (-N:N)[j] )
-    for ξ in (r, R)
-        @inbounds @fastmath @simd ivdep for k in 1:M
-            θ = θs[k]
+    G[i,j] = sum(θs) do θ
+        t = 0.0+0.0im
+        for ξ in (r,R)
             xk = ξ * exp(2π*im*θ)
-
-            G[i,j] +=   ψi(xk)'      *    ψj(xk)
-            A[i,j] +=   ψi(xk)'      *  (ψj ∘ τ)(xk)
-            L[i,j] += (ψi ∘ τ)(xk)'  *  (ψj ∘ τ)(xk)
+            t += ψi(xk)' * ψj(xk)
         end
-    end
+        t
+    end 
+    A[i,j] = sum(θs) do θ
+        t = 0.0+0.0im
+        for ξ in (r,R)
+            xk = ξ * exp(2π*im*θ)
+            t += ψi(xk)' * (ψj ∘ τ)(xk)
+        end
+        t
+    end 
+    L[i,j] = sum(θs) do θ
+        t = 0.0+0.0im
+        for ξ in (r,R)
+            xk = ξ * exp(2π*im*θ)
+            t += (ψi ∘ τ)(xk)' * (ψj ∘ τ)(xk)
+        end
+        t
+    end 
     next!(prog)
 end
+
+#=
+G = zeros(ComplexF64, N+1, N+1)
+A = zeros(ComplexF64, N+1, N+1)
+L = zeros(ComplexF64, N+1, N+1)
+
+prog = Progress((N+1)^2, desc="Computing matrices...")
+@threads for cartesian in CartesianIndices(G)
+    i, j = cartesian.I
+    ψi = z -> z^(i-1)
+    ψj = z -> z^(j-1)
+    G[i,j] = sum(θs) do θ
+        ψi(θ)' * ψj(θ)
+    end 
+    A[i,j] = sum(θs) do θ        
+        ψi(θ)' * (ψj ∘ T)(θ)
+    end 
+    L[i,j] = sum(θs) do θ
+        (ψi ∘ T)(θ)' * (ψj ∘ τ)(θ)
+    end 
+    next!(prog)
+end
+=#
 
 G ./= M
 A ./= M
@@ -239,14 +284,14 @@ L .+= L';  L ./= 2
 
 
 function residual(z, G=G, A=A, L=L)
-    λ = eigvals( inv(G) * (L - z * A' - z' * A + abs(z)^2 * G) )
+    λ = eigvals( (L - z * A' - z' * A + abs(z)^2 * G), G )
     λ0 = λ[ argmin(abs.(λ)) ]
     real(λ0) < 0 && @warn "erroneous negative residual calculated" z calculated_residual=λ0 maxlog=10
     sqrt(max(real(λ0), 0))
 end
 
 res = Matrix{Float64}( undef, (length(ys),length(xs)) )
-prog = Progress(length(res)^2, desc="Computing residuals...")
+#prog = Progress(length(res)^2, desc="Computing residuals...")
 @threads for cartesian in CartesianIndices(res)
     i, j = cartesian.I
     y = ys[i];  x = xs[j]
@@ -256,17 +301,17 @@ prog = Progress(length(res)^2, desc="Computing residuals...")
     else
         @exitsafe residual(z)
     end
-    next!(prog)
+    #next!(prog)
 end
 
-λ = eigvals(A)
+λ = eigvals(A, G)
 
 
 #r_ulam, λ_ulam = res_ulam()
 r_dmd = res
 λ_dmd = λ
 
-levels = sort!([#= 0.00001; 0.0001; 0.001; 0.005; 0.01; 0.02; 0.05;  =#0:0.1:1; 0.58])
+#levels = sort!([#= 0.00001; 0.0001; 0.001; 0.005; 0.01; 0.02; 0.05;  =#0:0.1:1; 0.58])
 
 #=p1 = contour(
     xs, ys, r_ulam, 
@@ -276,21 +321,32 @@ scatter!(λ_ulam, label="Ulam eigs", marker=:xcross)
 scatter!(λ_dmd, label="EDMD eigs", marker=:cross)
 plot!(cospi.(0:0.01:2), sinpi.(0:0.01:2), style=:dash, label="|z| = 1")=#
 
-p2 = contour(
-    xs, ys, r_dmd, 
-    levels=levels, aspectratio=1., colormap=:rainbow, clabels=true,
-    size=(1200,900)
-)
-scatter!(λ_ulam[1:10], label="Ulam eigs", marker=:xcross)
-scatter!(λ_dmd, label="EDMD eigs", marker=:cross)
-scatter!(ComplexF64[((0.8*exp(2π*im/9)) .^ (1:10)); ((0.8*exp(-2π*im/9)) .^ (1:10))], marker=:xcross, label="True eigs")
-plot!(cospi.(0:0.01:2), sinpi.(0:0.01:2), style=:dash, label="|z| = 1")
+nx, ny = length(xs), length(ys)
+mins = [ i>1 && i<ny && j>1 && j<nx && 
+         r_dmd[i,j] < min(r_dmd[i+1,j], r_dmd[i-1,j], r_dmd[i,j+1], r_dmd[i,j-1]) 
+         for i in 1:ny, j in 1:nx ]
+zs = xs' .+ ys.*im
 
-plot(p1, p2, size=(1200,600))
+begin
+    p2 = contour(
+        xs, ys, r_dmd, 
+        #levels=levels, 
+        aspectratio=1., colormap=:rainbow, #clabels=true,
+        size=(1200,900),
+        title="R = $R"
+    )
+    #scatter!(λ_ulam[1:10], label="Ulam eigs", marker=:xcross)
+    scatter!(λ_dmd, label="EDMD eigs", marker=:cross)
+    scatter!(λ_true, marker=:xcross, label="True eigs")
+    scatter!(zs[mins], marker=:star4, label="Minima of residuals")
+    plot!(cospi.(0:0.01:2), sinpi.(0:0.01:2), style=:dash, label="|z| = 1")
+end
 
-savefig("../talk_GAIO.jl/pseudospectrum_comparison_gauss.png")
+#plot(p1, p2, size=(1200,600))
 
+#savefig("../talk_GAIO.jl/pseudospectrum_comparison_gauss.png")
 
+#=
 anim = @animate for n_basis in [32, 64, 128, 256]
     n_points = 4*n_basis
     nodes, weights = gausslegendre(n_points)
@@ -304,11 +360,38 @@ anim = @animate for n_basis in [32, 64, 128, 256]
     scatter!(λ_dmd, label="EDMD eigs", marker=:cross)
     plot!(exp.( im .* (-π:0.01:π) ), label="|z| = 1", style=:dash)
     scatter!(λ_true, label="true eigs", marker=:xcross)
-#end
+end
+=#
 
-savefig(p2, "./pseudospectrum.png")
+#savefig(p2, "./pseudospectrum.png")
 
-return
+return p2
 end # function
 
-main()
+anim = @animate for R in 1.0:0.002:1.6
+    main(R)    
+end
+mp4(anim, "../pseudospectrum_R.mp4", fps=10)
+
+
+
+#= λs, vs = eigen(A)
+diag(vs' * (A'A-L) * vs)
+
+
+
+γ = exp(pi*im / 4)
+anim = @animate for R in 1.0:0.0002:1.1
+    zs = R .* exp.(im .* (-π:0.001:π))
+    plot(zs, aspectratio=1., label="|z|=1", leg=:topright)
+    plot!(τ.(zs, Ref((γ, ρ))), label="R = $R")
+end
+gif(anim)
+
+plot(1.:0.0001:2, ξ -> maximum(abs.(τ.(
+    ξ .* exp.(im .* (-π:0.001:π))
+))))
+
+plot(0.2:0.001:0.9, ξ -> maximum(abs.(τ.(
+    R .* exp.(im .* (-π:0.001:π)), Ref((ξ*γ, ρ))
+)))) =#
