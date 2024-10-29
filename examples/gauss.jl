@@ -19,7 +19,7 @@ macro exitsafe(expr)
     end
 end
 
-const μ = 0.4 * exp(im*pi/4)
+const μ = 0.9 * exp(im*pi/4)
 const ρ = 0. + 0im
 const params = (μ, ρ)
 
@@ -33,6 +33,16 @@ const λ_true = sort!(
     by=abs, rev=true 
 )
 
+
+using NPZ
+subsamp = 10
+lag = 10 
+dim = 30
+data = npzread("./examples/alanine-dipeptide-3x250ns-heavy-atom-positions.npz")
+angledata = npzread("./examples/alanine-dipeptide-3x250ns-backbone-dihedrals.npz")
+X = permutedims(data["arr_0"][1:subsamp:end-lag+1, 1:dim])
+Y = permutedims(data["arr_0"][lag:subsamp:end, 1:dim])
+α = angledata["arr_0"][1:subsamp:end, :]
 
 
 #=
@@ -201,51 +211,51 @@ end
 R = 11/10 - 1/32
 r = 1/R
 
-M = 200_000
-N = 16
+M = 2_000
+N = 20
 
-function main(R=R, M=M, N=N)
+#function main(R=R, M=M, N=N)
 
 r = 1/R
 
 dθ = 1/M
-θs = dθ:dθ:1
+θs = -1+dθ:2dθ:1
 
 
-basis( z, n, d = sqrt(r^(2n) + R^(2n)) ) = z^n / d
+basis( z, n, d = 1sqrt(r^(2n) + R^(2n)) ) = z^n / d
 basis(n) = z -> basis(z, n)
 
-G = zeros(ComplexF64, 2N+1, 2N+1)
-A = zeros(ComplexF64, 2N+1, 2N+1)
-L = zeros(ComplexF64, 2N+1, 2N+1)
+G = zeros(ComplexF64, N, N)
+A = zeros(ComplexF64, N, N)
+L = zeros(ComplexF64, N, N)
 
 
-prog = Progress((2N+1)^2, desc="Computing matrices...")
+prog = Progress((N)^2, desc="Computing matrices...")
 @threads for cartesian in CartesianIndices(G)
     i, j = cartesian.I
-    ψi = basis( (-N:N)[i] )
-    ψj = basis( (-N:N)[j] )
+    ψi = basis( (-0:N-1)[i] )
+    ψj = basis( (-0:N-1)[j] )
     G[i,j] = sum(θs) do θ
-        t = 0.0+0.0im
+        z = exp(2π*im*θ)
+        t = 0
         for ξ in (r,R)
-            xk = ξ * exp(2π*im*θ)
-            t += ψi(xk)' * ψj(xk)
+            t += ψi(ξ*z)' * ψj(ξ*z)
         end
         t
     end 
     A[i,j] = sum(θs) do θ
-        t = 0.0+0.0im
+        z = exp(2π*im*θ)
+        t = 0
         for ξ in (r,R)
-            xk = ξ * exp(2π*im*θ)
-            t += ψi(xk)' * (ψj ∘ τ)(xk)
+            t += ψi(ξ*z)' * (ψj ∘ τ)(ξ*z)
         end
         t
     end 
     L[i,j] = sum(θs) do θ
-        t = 0.0+0.0im
+        z = exp(2π*im*θ)
+        t = 0
         for ξ in (r,R)
-            xk = ξ * exp(2π*im*θ)
-            t += (ψi ∘ τ)(xk)' * (ψj ∘ τ)(xk)
+            t += (ψi ∘ τ)(ξ*z)' * (ψj ∘ τ)(ξ*z)
         end
         t
     end 
@@ -333,7 +343,7 @@ begin
         #levels=levels, 
         aspectratio=1., colormap=:rainbow, #clabels=true,
         size=(1200,900),
-        title="R = $R"
+        title=""
     )
     #scatter!(λ_ulam[1:10], label="Ulam eigs", marker=:xcross)
     scatter!(λ_dmd, label="EDMD eigs", marker=:cross)
@@ -365,8 +375,8 @@ end
 
 #savefig(p2, "./pseudospectrum.png")
 
-return p2
-end # function
+#return p2
+#end # function
 
 anim = @animate for R in 1.0:0.002:1.6
     main(R)    
@@ -395,3 +405,80 @@ plot(1.:0.0001:2, ξ -> maximum(abs.(τ.(
 plot(0.2:0.001:0.9, ξ -> maximum(abs.(τ.(
     R .* exp.(im .* (-π:0.001:π)), Ref((ξ*γ, ρ))
 )))) =#
+
+
+
+
+
+#function kernelresdmd(S, X#= [x1 | x2 | ... | xM] =#, f, r = length(X))
+    #d, M = size(X)
+    Y = T.(X)
+
+    Ĝ = @showprogress [S(xj, xk, 0.01) for xj in X, xk in X]
+    Â = @showprogress [S(yj, xk, 0.01) for yj in Y, xk in X]
+    M̂ = @showprogress [S(yj, yk, 0.01) for yj in Y, yk in Y]
+
+    r̃ = 14
+    σ, Q = eigen(Ĝ)
+
+    Σ̂ = Diagonal( sqrt.(σ[end-r̃+1:end]) )
+    Q̂ = Q[:, end-r̃+1:end]
+    
+    Σ̂⁺ = inv(Σ̂)
+    K̂ = (Σ̂⁺*Q̂') * Â * (Q̂*Σ̂⁺)
+    L̂ = (Q̂*Σ̂⁺)' * M̂ * (Q̂*Σ̂⁺)
+    
+    res = Matrix{Float64}( undef, (length(ys),length(xs)) )
+    prog = Progress(length(res), desc="Computing residuals...")
+    @threads for cartesian in CartesianIndices(res)
+        i, j = cartesian.I
+        y = ys[i];  x = xs[j]
+        z = x + y*im
+        res[i,j] = if abs(z) > 1.2
+            NaN
+        else
+            @exitsafe residual(z, I(r̃), K̂, L̂)
+        end
+        next!(prog)
+    end
+
+    λ, ev = eigen(K̂)
+
+    #return λ, res
+#end
+
+S(x, y, α=N) = (1 + x'y)^α
+S(α) = (x,y) -> S(x, y, α)
+
+S(x, y, c=1.) = exp( - norm(x-y)^2 / c )
+
+r = 8
+X = [θs;]
+
+λ_dmd, r_dmd = λ, res
+
+nx, ny = length(xs), length(ys)
+mins = [ i>1 && i<ny && j>1 && j<nx && 
+         r_dmd[i,j] < min(r_dmd[i+1,j], r_dmd[i-1,j], r_dmd[i,j+1], r_dmd[i,j-1]) 
+         for i in 1:ny, j in 1:nx ]
+zs = xs' .+ ys.*im
+
+begin
+    p2 = contour(
+        xs, ys, r_dmd,#log.(r_dmd.+1e-10), 
+        #levels=levels, 
+        aspectratio=1., colormap=:rainbow, #clabels=true,
+        size=(1200,900),
+        #title="R = $R"
+    )
+    #scatter!(λ_ulam[1:10], label="Ulam eigs", marker=:xcross)
+    scatter!(λ_dmd, label="EDMD eigs", marker=:cross)
+    scatter!(λ_true, marker=:xcross, label="True eigs")
+    scatter!(zs[mins], marker=:star4, label="Minima of residuals")
+    plot!(cospi.(0:0.01:2), sinpi.(0:0.01:2), style=:dash, label="|z| = 1")
+end
+
+
+v = real.( Q̂*Σ̂*ev[:, end-1] )
+mid = ( maximum(v) + minimum(v) ) / 2
+scatter(α[:, 1], α[:, 2], zcolor=sign.(v) .- mid, m=(:bluesreds, 0.3))
