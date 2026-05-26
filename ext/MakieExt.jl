@@ -1,7 +1,7 @@
 module MakieExt
 
 using GAIO, Makie, GeometryBasics, StaticArrays
-using Makie: MakieCore
+import Makie: MakieCore
 import GAIO: default_box_color
     
 """
