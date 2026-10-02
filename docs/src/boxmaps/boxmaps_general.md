@@ -43,7 +43,8 @@ p = plot!(
     linewidth=4, 
     fillcolor=RGBA(0.,0.4,1.,0.2), 
     linecolor=RGBA(0.,0.4,1.,0.4), 
-    lab="Box"
+    lab="Box", 
+    overwrite_figure=false, # hide
 )
 
 # Plot the true image of B under f.
@@ -63,7 +64,8 @@ p = plot!(
     linewidth=4, fill=(0, RGBA(0.,0.,1.,0.2)), 
     color=RGBA(0.,0.,1.,0.4), 
     lab="True image under f", 
-    dpi=500 # hide
+    dpi=500, # hide
+    overwrite_figure=false, # hide
 )
 
 savefig("box_image.png"); nothing # hide

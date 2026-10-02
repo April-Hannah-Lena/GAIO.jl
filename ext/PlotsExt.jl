@@ -3,7 +3,6 @@ module PlotsExt
 using GAIO, Plots
 using Plots: RecipesBase
 using Plots.RecipesBase: @recipe
-import GAIO: default_box_color
 
 @recipe function plot!(boxset::BoxSet{Box{N,T}}; projection=x->x[1:2]) where {N,T}
     xs = Vector{Float32}(undef, 5*length(boxset))
@@ -18,7 +17,6 @@ import GAIO: default_box_color
     end
     
     seriestype := :shape
-    color --> default_box_color
     linecolor --> :black
     linewidth --> 0.
     
@@ -60,7 +58,6 @@ end
     end
     
     seriestype := :shape
-    color --> default_box_color
     linecolor --> :black
     linewidth --> 0.
     
@@ -79,7 +76,6 @@ end
     end
     
     seriestype := :shape
-    color --> default_box_color
     linecolor --> :black
     linewidth --> 0.
 

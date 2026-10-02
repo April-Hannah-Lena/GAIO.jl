@@ -45,10 +45,10 @@ W = unstable_set(F, S)
 
 ```@example 1
 using GLMakie
+const Box = GAIO.Box
 
 fig, ax, ms = plot(W);
 
-using GLMakie: save # hide
 save("unstable_manifold.png", fig); nothing # hide
 ```
 
@@ -75,7 +75,6 @@ end;
 ```@example 1
 fig, ax, ms = plot(W);
 
-using GLMakie: save # hide
 save("unstable_manifold.png", fig); nothing # hide
 ```
 

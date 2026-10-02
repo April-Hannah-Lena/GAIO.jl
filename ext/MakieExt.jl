@@ -1,8 +1,6 @@
 module MakieExt
 
 using GAIO, Makie, GeometryBasics, StaticArrays
-import Makie: MakieCore
-import GAIO: default_box_color
     
 """
     plot(boxset::BoxSet)
@@ -17,32 +15,28 @@ Plot a `BoxSet` or `BoxMeasure`.
 `projection = x -> x[1:3]`
 If the dimension of the system is larger than 3, use this function to project to 3-d space.
 
-`color = :red`
-Color used for the boxes.
-
 `colormap = :default`
 Colormap used for plotting `BoxMeasure`s values.
 
-`marker = HyperRectangle(GeometryBasics.Vec3f0(0), GeometryBasics.Vec3f0(1))`
+`marker = HyperRectangle(GeometryBasics.Vec3f(0), GeometryBasics.Vec3f(1))`
 The marker for an individual box. Only works if using Makie for plotting. 
 
 All other attributes are taken from MeshScatter.
 
 """
-@recipe(PlotBoxes) do scene
-    attr = MakieCore.Attributes(
-        marker     = HyperRectangle(GeometryBasics.Vec3f0(0), GeometryBasics.Vec3f0(1)),
-        projection = nothing,
-        color      = default_box_color
+@recipe PlotBoxes begin
+    Makie.documented_attributes(Makie.MeshScatter)...
+
+    marker = HyperRectangle(
+        GeometryBasics.Vec3f(0),
+        GeometryBasics.Vec3f(1),
     )
-    MakieCore.shading_attributes!(attr)
-    MakieCore.generic_plot_attributes!(attr)
-    MakieCore.colormap_attributes!(attr, MakieCore.theme(scene, :colormap))
+    projection = nothing 
 end
 
 Makie.preferred_axis_type(::PlotBoxes) = Axis3
 
-function MakieCore.plot!(boxes::PlotBoxes{<:Tuple{<:BoxSet{GAIO.Box{N,T}}}}) where {N,T}
+function Makie.plot!(boxes::PlotBoxes{<:Tuple{<:BoxSet{GAIO.Box{N,T}}}}) where {N,T}
 
     boxset = boxes[1][]
     d = min(N, 3)
@@ -59,16 +53,15 @@ function MakieCore.plot!(boxes::PlotBoxes{<:Tuple{<:BoxSet{GAIO.Box{N,T}}}}) whe
         radius[i] = q(box.radius) .* 1.9
     end
 
-    MakieCore.meshscatter!(
+    Makie.meshscatter!(
         boxes, 
+        boxes.attributes, 
         center, 
-        marker      = boxes.marker[], 
-        color       = boxes.color[], 
-        markersize  = radius
+        markersize = radius
     )
 end
 
-function MakieCore.plot!(boxes::PlotBoxes{<:Tuple{<:BoxMeasure{GAIO.Box{N,T}}}}) where {N,T}
+function Makie.plot!(boxes::PlotBoxes{<:Tuple{<:BoxMeasure{GAIO.Box{N,T}}}}) where {N,T}
 
     boxmeas = boxes[1][]
     d = min(N, 3)
@@ -87,20 +80,18 @@ function MakieCore.plot!(boxes::PlotBoxes{<:Tuple{<:BoxMeasure{GAIO.Box{N,T}}}})
         colors[i] = value
     end
 
-    boxes.color[] == default_box_color && (boxes.color[] = colors)
-    boxes.colorrange[] = extrema(colors)
+    haskey(boxes.kw, :color)  ||  Makie.update!(boxes, color=colors)
+    #boxes.colorrange[] = extrema(colors)
 
-    MakieCore.meshscatter!(
+    Makie.meshscatter!(
         boxes, 
+        boxes.attributes,
         center, 
-        marker      = boxes.marker[], 
-        colormap    = boxes.colormap[],
-        color       = boxes.color[], 
-        markersize  = radius
+        markersize = radius, 
     )
 end
 
-function MakieCore.plot!(boxes::PlotBoxes{<:Tuple{<:BoxMeasure{GAIO.Box{2,T}}}}) where {T}
+function Makie.plot!(boxes::PlotBoxes{<:Tuple{<:BoxMeasure{GAIO.Box{2,T}}}}) where {T}
 
     boxmeas = boxes[1][]
 
@@ -116,16 +107,15 @@ function MakieCore.plot!(boxes::PlotBoxes{<:Tuple{<:BoxMeasure{GAIO.Box{2,T}}}})
 
     boxes.colorrange[] = extrema(x -> x[3], center)
 
-    MakieCore.meshscatter!(
+    Makie.meshscatter!(
         boxes, 
+        boxes.attributes, 
         center, 
-        marker      = boxes.marker[], 
-        color       = boxes.color[], 
         markersize  = radius
     )
 end
 
-function MakieCore.plot!(boxes::PlotBoxes{<:Tuple{<:BoxMeasure{GAIO.Box{1,T}}}}) where {T}
+function Makie.plot!(boxes::PlotBoxes{<:Tuple{<:BoxMeasure{GAIO.Box{1,T}}}}) where {T}
 
     boxmeas = boxes[1][]
 
@@ -144,27 +134,27 @@ function MakieCore.plot!(boxes::PlotBoxes{<:Tuple{<:BoxMeasure{GAIO.Box{1,T}}}})
 
     boxes.colorrange[] = extrema(height)
 
-    MakieCore.linesegments!(
+    Makie.linesegments!(
         boxes, 
+        boxes.attributes,
         center,
         height,
-        color      = boxes.color[],
         linewidth  = radius .* 1f3
     )
 end
 
-MakieCore.plottype(::Union{BoxSet,BoxMeasure}) = PlotBoxes
+Makie.plottype(::Union{BoxSet,BoxMeasure}) = PlotBoxes
 
-function MakieCore.convert_arguments(::MakieCore.PointBased, coords::AbstractVector{<:Complex})
+function Makie.convert_arguments(::Makie.PointBased, coords::AbstractVector{<:Complex})
     #Float32.(real.(coords)), Float32.(imag.(coords))
     (map(x -> Point2f0(real(x), imag(x)), coords),)
 end
 
-function MakieCore.convert_arguments(::MakieCore.PointBased, coords::AbstractVector{<:Complex}, heights::AbstractVector{<:Real})
+function Makie.convert_arguments(::Makie.PointBased, coords::AbstractVector{<:Complex}, heights::AbstractVector{<:Real})
     #Float32.(real.(coords)), Float32.(imag.(coords)), Float32.(heights)
     (map((x,y) -> Point3f0(real(x), imag(x), y)),)
 end
 
-MakieCore.plottype(::AbstractVector{<:Complex}) = Scatter
+Makie.plottype(::AbstractVector{<:Complex}) = Scatter
 
 end # module

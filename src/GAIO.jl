@@ -80,7 +80,6 @@ export seba, partition_unity, partition_disjoint, partition_likelihood
 # ENV["JULIA_DEBUG"] = all
 
 const SVNT{N,T} = Union{<:NTuple{N,T}, <:StaticVector{N,T}}
-const default_box_color = :red # default color for plotting
 
 # we need a small helper function because of 
 # how julia dispatches on `union!`

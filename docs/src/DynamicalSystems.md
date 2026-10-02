@@ -46,7 +46,7 @@ lorenz(u, p=p0, t=0) = lorenz_dudx(u, p, t, Δt)
 
 u0 = SA_F64[0, 0, 0]
 p0 = SA_F64[10, 28, 0.4]
-diffeq = (alg = RK4(), dt = 1/20, adaptive = false)
+diffeq = (alg = Tsit5(), dt = 1/20, adaptive = false)
 
 lorenz_system = ContinuousDynamicalSystem(lorenz, u0, p0; diffeq)
 

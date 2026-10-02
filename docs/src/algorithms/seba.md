@@ -137,7 +137,7 @@ p = plot(S1, xlims=(0,2), ylims=(0,1), color=:red);
 p = plot!(p, S2, color=:blue);
 
 p = plot(S1, xlims=(0,2), ylims=(0,1), color=:red, dpi=500); # hide
-p = plot!(p, S2, color=:blue); # hide
+p = plot!(p, S2, color=:blue, overwrite_figure=false); # hide
 savefig("seba.png"); nothing # hide
 ```
 

@@ -59,6 +59,7 @@ p = plot!(
     p, F(B), 
     color=RGBA(1.,0.,0.,0.5), 
     lab="$n_points MonteCarlo test points", 
+    overwrite_figure=false, # hide
     dpi=500 # hide
 )
 

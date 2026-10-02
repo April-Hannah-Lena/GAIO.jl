@@ -41,7 +41,7 @@ boundary = [
 ]
 b = f.(eachrow(boundary))
 boundary .= [first.(b) last.(b)]
-p = plot!(p, boundary[:, 1], boundary[:, 2], linewidth=4, fill=(0, RGBA(0.,0.,1.,0.2)), color=RGBA(0.,0.,1.,0.4), lab="True image under f")
+p = plot!(p, boundary[:, 1], boundary[:, 2], linewidth=4, fill=(0, RGBA(0.,0.,1.,0.2)), color=RGBA(0.,0.,1.,0.4), lab="True image under f", overwrite_figure=false)
 ```
 
 ```@repl 1
