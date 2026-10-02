@@ -44,11 +44,11 @@ W = unstable_set(F, S)
 ```
 
 ```@example 1
-using GLMakie
-const Box = GAIO.Box
+using GLMakie: plot
 
 fig, ax, ms = plot(W);
 
+using GLMakie: save # hide
 save("unstable_manifold.png", fig); nothing # hide
 ```
 
@@ -57,6 +57,8 @@ save("unstable_manifold.png", fig); nothing # hide
 We can animate this plot using the `record` function from Makie.jl
 
 ```@example 1
+using GLMakie: Figure, Axis3, plot!, record
+
 fig = Figure();
 ax = Axis3(fig[1,1], viewmode=:fit)
 ms = plot!(ax, W, color=(:red, 0.6))
